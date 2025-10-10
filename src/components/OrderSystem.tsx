@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, OrderItem, Order } from '../types';
+import { Menu, OrderItem, Order, RecipeWithDetails } from '../types';
 import { MenuService } from '../services/menuService';
 import { OrderService } from '../services/orderService';
 import { InventoryService } from '../services/inventoryService';
@@ -19,21 +19,106 @@ const OrderSystem: React.FC<OrderSystemProps> = ({ onOrderComplete }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [menuRecipes, setMenuRecipes] = useState<{ [menuId: number]: RecipeWithDetails[] }>({});
+  const [menuAvailability, setMenuAvailability] = useState<{ [menuId: number]: { available: boolean; reason?: string } }>({});
 
   useEffect(() => {
     loadMenus();
   }, []);
 
+  useEffect(() => {
+    checkMenuAvailability();
+  }, [menus, cart]);
+
   const loadMenus = () => {
     try {
       const menuData = MenuService.getAllMenus();
       setMenus(menuData);
+
+      // Load recipes for all menus
+      const recipes: { [menuId: number]: RecipeWithDetails[] } = {};
+      for (const menu of menuData) {
+        if (menu.id) {
+          recipes[menu.id] = MenuService.getRecipesByMenuId(menu.id);
+        }
+      }
+      setMenuRecipes(recipes);
     } catch (err) {
       setError('메뉴를 불러오는데 실패했습니다.');
     }
   };
 
+  const checkMenuAvailability = () => {
+    const availability: { [menuId: number]: { available: boolean; reason?: string } } = {};
+
+    for (const menu of menus) {
+      if (!menu.id) continue;
+
+      const recipes = menuRecipes[menu.id] || [];
+      if (recipes.length === 0) {
+        availability[menu.id] = { available: false, reason: '재료가 설정되지 않음' };
+        continue;
+      }
+
+      // Calculate how many units of this menu we already have in cart
+      const cartQuantity = cart.find(item => item.menu_id === menu.id)?.quantity || 0;
+
+      let canMake = true;
+      let limitingIngredient = '';
+      let maxQuantity = Infinity;
+
+      for (const recipe of recipes) {
+        const inventory = InventoryService.getInventoryByIngredientId(recipe.ingredient_id);
+        if (!inventory) {
+          availability[menu.id] = {
+            available: false,
+            reason: `재고 정보 없음: ${recipe.ingredient_name}`
+          };
+          canMake = false;
+          break;
+        }
+
+        const requiredForOne = recipe.quantity;
+        const alreadyUsed = requiredForOne * cartQuantity;
+        const availableStock = inventory.current_stock - alreadyUsed;
+        const possibleQuantity = Math.floor(availableStock / requiredForOne);
+
+        if (possibleQuantity < 1) {
+          availability[menu.id] = {
+            available: false,
+            reason: `재고 부족: ${recipe.ingredient_name} (필요: ${requiredForOne}, 재고: ${availableStock})`
+          };
+          canMake = false;
+          break;
+        }
+
+        if (possibleQuantity < maxQuantity) {
+          maxQuantity = possibleQuantity;
+          limitingIngredient = recipe.ingredient_name;
+        }
+      }
+
+      if (canMake) {
+        availability[menu.id] = {
+          available: true,
+          reason: maxQuantity === Infinity ? '' : `최대 ${maxQuantity}개 주문 가능 (${limitingIngredient} 제한)`
+        };
+      }
+    }
+
+    setMenuAvailability(availability);
+  };
+
   const addToCart = (menu: Menu) => {
+    if (!menu.id) return;
+
+    const availability = menuAvailability[menu.id];
+    if (!availability?.available) {
+      setError(availability?.reason || '이 메뉴는 현재 주문할 수 없습니다.');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
     const existingItem = cart.find(item => item.menu_id === menu.id);
 
     if (existingItem) {
@@ -120,13 +205,6 @@ const OrderSystem: React.FC<OrderSystemProps> = ({ onOrderComplete }) => {
     setError('');
 
     try {
-      // 재고 확인
-      const inventoryAvailable = await checkInventoryAvailable();
-      if (!inventoryAvailable) {
-        setLoading(false);
-        return;
-      }
-
       // 주문 확인
       const totalAmount = calculateTotal();
       const confirmMessage = `
@@ -142,36 +220,23 @@ ${cart.map(item => `• ${item.menu_name} x${item.quantity} = ₩${(item.unit_pr
         return;
       }
 
-      // 주문 생성
-      const order = OrderService.createOrder(totalAmount);
+      // OrderService의 createOrderWithItems 메서드 사용 (재고 체크 및 차감 자동 처리)
+      const orderItems = cart.map(item => ({
+        menu_id: item.menu_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price
+      }));
 
-      // 주문 아이템 추가 및 재고 차감
-      for (const cartItem of cart) {
-        OrderService.addOrderItem({
-          order_id: order.id!,
-          menu_id: cartItem.menu_id,
-          quantity: cartItem.quantity,
-          unit_price: cartItem.unit_price
-        });
-
-        // 재고 차감
-        const recipes = MenuService.getRecipesByMenuId(cartItem.menu_id);
-        for (const recipe of recipes) {
-          const requiredAmount = recipe.quantity * cartItem.quantity;
-          InventoryService.adjustStock(
-            recipe.ingredient_id,
-            requiredAmount,
-            'OUT',
-            `주문 #${order.id} - ${cartItem.menu_name}`
-          );
-        }
-      }
+      const orderId = OrderService.createOrderWithItems(orderItems);
 
       setSuccess('주문이 성공적으로 완료되었습니다!');
       setCart([]);
 
       if (onOrderComplete) {
-        onOrderComplete(order);
+        const order = OrderService.getOrderById(orderId);
+        if (order) {
+          onOrderComplete(order);
+        }
       }
 
     } catch (err) {
@@ -194,22 +259,61 @@ ${cart.map(item => `• ${item.menu_name} x${item.quantity} = ₩${(item.unit_pr
         <div className="menu-section">
           <h3>메뉴 선택</h3>
           <div className="menu-grid">
-            {menus.map(menu => (
-              <div key={menu.id} className="menu-card">
-                <div className="menu-info">
-                  <h4>{menu.name}</h4>
-                  <p className="menu-description">{menu.description}</p>
-                  <p className="menu-price">₩{menu.price.toLocaleString()}</p>
+            {menus.map(menu => {
+              const availability = menuAvailability[menu.id!];
+              const isAvailable = availability?.available;
+              const cartItem = cart.find(item => item.menu_id === menu.id);
+
+              return (
+                <div key={menu.id} className={`menu-card ${!isAvailable ? 'unavailable' : ''}`}>
+                  <div className="menu-info">
+                    <h4>{menu.name}</h4>
+                    <p className="menu-description">{menu.description}</p>
+                    <p className="menu-price">₩{menu.price.toLocaleString()}</p>
+
+                    {/* Stock Status */}
+                    <div className="stock-status">
+                      {availability ? (
+                        <div className={`status-badge ${isAvailable ? 'available' : 'unavailable'}`}>
+                          {isAvailable ? '✅ 주문 가능' : '❌ 주문 불가'}
+                        </div>
+                      ) : (
+                        <div className="status-badge loading">📋 확인 중...</div>
+                      )}
+
+                      {availability?.reason && (
+                        <p className="availability-reason">{availability.reason}</p>
+                      )}
+
+                      {cartItem && (
+                        <p className="cart-info">장바구니에 {cartItem.quantity}개</p>
+                      )}
+                    </div>
+
+                    {/* Recipe Info */}
+                    {menuRecipes[menu.id!] && menuRecipes[menu.id!].length > 0 && (
+                      <div className="recipe-preview">
+                        <p className="recipe-title">📝 필요 재료:</p>
+                        <div className="recipe-ingredients">
+                          {menuRecipes[menu.id!].map(recipe => (
+                            <span key={recipe.id} className="ingredient-tag">
+                              {recipe.ingredient_name} {recipe.quantity}{recipe.ingredient_unit}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => addToCart(menu)}
+                    disabled={loading || !isAvailable}
+                  >
+                    {!isAvailable ? '주문 불가' : '추가'}
+                  </button>
                 </div>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => addToCart(menu)}
-                  disabled={loading}
-                >
-                  추가
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -349,6 +453,16 @@ ${cart.map(item => `• ${item.menu_name} x${item.quantity} = ₩${(item.unit_pr
           box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
+        .menu-card.unavailable {
+          opacity: 0.7;
+          background: #f5f5f5;
+        }
+
+        .menu-card.unavailable:hover {
+          transform: none;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
         .menu-info h4 {
           margin: 0 0 0.5rem 0;
           color: #333;
@@ -367,6 +481,79 @@ ${cart.map(item => `• ${item.menu_name} x${item.quantity} = ₩${(item.unit_pr
           font-weight: bold;
           color: #2196f3;
           margin: 0 0 1rem 0;
+        }
+
+        .stock-status {
+          margin: 1rem 0;
+        }
+
+        .status-badge {
+          display: inline-block;
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
+          font-size: 0.8rem;
+          font-weight: 500;
+          margin-bottom: 0.5rem;
+        }
+
+        .status-badge.available {
+          background: #e8f5e8;
+          color: #4caf50;
+          border: 1px solid #4caf50;
+        }
+
+        .status-badge.unavailable {
+          background: #ffebee;
+          color: #f44336;
+          border: 1px solid #f44336;
+        }
+
+        .status-badge.loading {
+          background: #fff3e0;
+          color: #ff9800;
+          border: 1px solid #ff9800;
+        }
+
+        .availability-reason {
+          font-size: 0.75rem;
+          color: #666;
+          margin: 0;
+          line-height: 1.3;
+        }
+
+        .cart-info {
+          font-size: 0.75rem;
+          color: #2196f3;
+          font-weight: 500;
+          margin: 0.25rem 0 0 0;
+        }
+
+        .recipe-preview {
+          margin-top: 1rem;
+          padding-top: 1rem;
+          border-top: 1px solid #eee;
+        }
+
+        .recipe-title {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #333;
+          margin: 0 0 0.5rem 0;
+        }
+
+        .recipe-ingredients {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.25rem;
+        }
+
+        .ingredient-tag {
+          background: #f0f0f0;
+          color: #555;
+          padding: 0.2rem 0.4rem;
+          border-radius: 3px;
+          font-size: 0.7rem;
+          font-weight: 500;
         }
 
         .cart-section {

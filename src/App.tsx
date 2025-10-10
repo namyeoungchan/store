@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { initDatabase } from './database/database';
+import { insertDummyData } from './data/dummyData'; // 더미 데이터 - 나중에 삭제 예정
 import DashboardPage from './pages/DashboardPage';
 import { IngredientsPage } from './pages/IngredientsPage';
 import { MenusPage } from './pages/MenusPage';
@@ -18,6 +19,9 @@ function App() {
       try {
         await initDatabase();
         console.log('Database initialized successfully');
+
+        // 더미 데이터 추가 (실제 운영 시 삭제 예정)
+        insertDummyData();
       } catch (error) {
         console.error('Failed to initialize database:', error);
       } finally {
