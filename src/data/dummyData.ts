@@ -124,6 +124,55 @@ export const insertDummyData = () => {
     });
     inventoryStmt.free();
 
+    // 샘플 주문 데이터 (다양한 결제 유형으로)
+    const sampleOrders = [
+      { payment_type: 'CARD', total_amount: 4000 },
+      { payment_type: 'BAEMIN', total_amount: 9000 },
+      { payment_type: 'COUPANG', total_amount: 5500 },
+      { payment_type: 'YOGIYO', total_amount: 12000 },
+      { payment_type: 'CARD', total_amount: 6000 }
+    ];
+
+    sampleOrders.forEach((order, index) => {
+      const orderDate = new Date();
+      orderDate.setDate(orderDate.getDate() - index); // 며칠 전 주문으로 설정
+
+      // 입금 예정일 계산
+      let businessDays = 0;
+      switch (order.payment_type) {
+        case 'CARD':
+          businessDays = 2;
+          break;
+        case 'COUPANG':
+        case 'BAEMIN':
+        case 'YOGIYO':
+          businessDays = 5;
+          break;
+      }
+
+      const expectedDate = new Date(orderDate);
+      let addedDays = 0;
+      while (addedDays < businessDays) {
+        expectedDate.setDate(expectedDate.getDate() + 1);
+        if (expectedDate.getDay() !== 0 && expectedDate.getDay() !== 6) {
+          addedDays++;
+        }
+      }
+
+      const orderStmt = db.prepare(`
+        INSERT INTO orders (order_date, total_amount, payment_type, expected_deposit_date, is_deposited)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      orderStmt.run([
+        orderDate.toISOString(),
+        order.total_amount,
+        order.payment_type,
+        expectedDate.toISOString().split('T')[0],
+        index > 2 ? 0 : 1 // 처음 3개는 입금 완료, 나머지는 대기
+      ]);
+      orderStmt.free();
+    });
+
     console.log('✅ 더미 데이터가 성공적으로 추가되었습니다!');
     console.log('📝 실제 운영 시에는 src/data/dummyData.ts 파일을 삭제하고');
     console.log('   App.tsx에서 insertDummyData() 호출 부분을 제거하세요.');

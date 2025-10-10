@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, OrderItem, Order, RecipeWithDetails } from '../types';
+import { Menu, OrderItem, Order, RecipeWithDetails, PaymentType } from '../types';
 import { MenuService } from '../services/menuService';
 import { OrderService } from '../services/orderService';
 import { InventoryService } from '../services/inventoryService';
+import { SalesService } from '../services/salesService';
 
 interface OrderSystemProps {
   onOrderComplete?: (order: Order) => void;
@@ -21,6 +22,7 @@ const OrderSystem: React.FC<OrderSystemProps> = ({ onOrderComplete }) => {
   const [success, setSuccess] = useState('');
   const [menuRecipes, setMenuRecipes] = useState<{ [menuId: number]: RecipeWithDetails[] }>({});
   const [menuAvailability, setMenuAvailability] = useState<{ [menuId: number]: { available: boolean; reason?: string } }>({});
+  const [selectedPaymentType, setSelectedPaymentType] = useState<PaymentType>('CARD');
 
   useEffect(() => {
     loadMenus();
@@ -227,7 +229,7 @@ ${cart.map(item => `• ${item.menu_name} x${item.quantity} = ₩${(item.unit_pr
         unit_price: item.unit_price
       }));
 
-      const orderId = OrderService.createOrderWithItems(orderItems);
+      const orderId = OrderService.createOrderWithItems(orderItems, selectedPaymentType);
 
       setSuccess('주문이 성공적으로 완료되었습니다!');
       setCart([]);
@@ -372,6 +374,34 @@ ${cart.map(item => `• ${item.menu_name} x${item.quantity} = ₩${(item.unit_pr
               </div>
 
               <div className="cart-summary">
+                <div className="payment-type-section">
+                  <h4>결제 방법</h4>
+                  <div className="payment-options">
+                    {(['CARD', 'COUPANG', 'BAEMIN', 'YOGIYO'] as PaymentType[]).map(type => (
+                      <label key={type} className="payment-option">
+                        <input
+                          type="radio"
+                          name="paymentType"
+                          value={type}
+                          checked={selectedPaymentType === type}
+                          onChange={(e) => setSelectedPaymentType(e.target.value as PaymentType)}
+                        />
+                        <span className="payment-label">
+                          {SalesService.getPaymentTypeIcon(type)} {SalesService.getPaymentTypeDisplayName(type)}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="deposit-info">
+                    <p>
+                      📅 입금 예정일: {SalesService.calculateExpectedDepositDate(
+                        new Date().toISOString(),
+                        selectedPaymentType
+                      )}
+                    </p>
+                  </div>
+                </div>
+
                 <div className="total-amount">
                   <strong>총 금액: ₩{calculateTotal().toLocaleString()}</strong>
                 </div>
@@ -632,6 +662,73 @@ ${cart.map(item => `• ${item.menu_name} x${item.quantity} = ₩${(item.unit_pr
           margin-top: 1rem;
           padding-top: 1rem;
           border-top: 2px solid #eee;
+        }
+
+        .payment-type-section {
+          margin-bottom: 1.5rem;
+        }
+
+        .payment-type-section h4 {
+          margin: 0 0 1rem 0;
+          color: #333;
+          font-size: 1rem;
+        }
+
+        .payment-options {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .payment-option {
+          display: flex;
+          align-items: center;
+          padding: 0.75rem;
+          border: 2px solid #e2e8f0;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .payment-option:hover {
+          border-color: #2196f3;
+          background: #f8faff;
+        }
+
+        .payment-option input[type="radio"] {
+          margin-right: 0.75rem;
+          transform: scale(1.2);
+        }
+
+        .payment-option input[type="radio"]:checked + .payment-label {
+          font-weight: 600;
+          color: #2196f3;
+        }
+
+        .payment-option:has(input[type="radio"]:checked) {
+          border-color: #2196f3;
+          background: #f0f7ff;
+          box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+        }
+
+        .payment-label {
+          font-size: 0.9rem;
+          color: #333;
+        }
+
+        .deposit-info {
+          margin-top: 1rem;
+          padding: 0.75rem;
+          background: #f0f7ff;
+          border-radius: 6px;
+          border-left: 3px solid #2196f3;
+        }
+
+        .deposit-info p {
+          margin: 0;
+          font-size: 0.85rem;
+          color: #1976d2;
+          font-weight: 500;
         }
 
         .total-amount {

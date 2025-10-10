@@ -1,7 +1,8 @@
 import { getDatabase } from '../database/database';
-import { Order, OrderItem, OrderItemWithDetails, RecipeWithDetails } from '../types';
+import { Order, OrderItem, OrderItemWithDetails, RecipeWithDetails, PaymentType } from '../types';
 import { RecipeService } from './recipeService';
 import { InventoryService } from './inventoryService';
+import { SalesService } from './salesService';
 
 export class OrderService {
   static getAllOrders(): Order[] {
@@ -14,7 +15,11 @@ export class OrderService {
       orders.push({
         id: row.id as number,
         order_date: row.order_date as string,
-        total_amount: row.total_amount as number
+        total_amount: row.total_amount as number,
+        payment_type: (row.payment_type as PaymentType) || 'CARD',
+        expected_deposit_date: row.expected_deposit_date as string,
+        is_deposited: Boolean(row.is_deposited),
+        deposited_date: row.deposited_date as string
       });
     }
 
@@ -33,7 +38,11 @@ export class OrderService {
       return {
         id: row.id as number,
         order_date: row.order_date as string,
-        total_amount: row.total_amount as number
+        total_amount: row.total_amount as number,
+        payment_type: (row.payment_type as PaymentType) || 'CARD',
+        expected_deposit_date: row.expected_deposit_date as string,
+        is_deposited: Boolean(row.is_deposited),
+        deposited_date: row.deposited_date as string
       };
     }
 
@@ -72,14 +81,17 @@ export class OrderService {
     return orderItems;
   }
 
-  static createOrder(totalAmount: number): Order {
+  static createOrder(totalAmount: number, paymentType: PaymentType = 'CARD'): Order {
     const db = getDatabase();
+
+    const orderDate = new Date().toISOString();
+    const expectedDepositDate = SalesService.calculateExpectedDepositDate(orderDate, paymentType);
 
     // 주문 생성
     const orderStmt = db.prepare(
-      'INSERT INTO orders (total_amount) VALUES (?)'
+      'INSERT INTO orders (total_amount, payment_type, expected_deposit_date) VALUES (?, ?, ?)'
     );
-    orderStmt.run([totalAmount]);
+    orderStmt.run([totalAmount, paymentType, expectedDepositDate]);
     orderStmt.free();
 
     // 주문 ID 가져오기
@@ -139,7 +151,10 @@ export class OrderService {
     stmt.free();
   }
 
-  static createOrderWithItems(orderItems: Array<{ menu_id: number; quantity: number; unit_price: number }>): number {
+  static createOrderWithItems(
+    orderItems: Array<{ menu_id: number; quantity: number; unit_price: number }>,
+    paymentType: PaymentType = 'CARD'
+  ): number {
     const db = getDatabase();
 
     // 주문 가능 여부 확인 (재고 체크)
@@ -156,11 +171,15 @@ export class OrderService {
     // 총 금액 계산
     const totalAmount = orderItems.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
 
+    // 입금 예정일 계산
+    const orderDate = new Date().toISOString();
+    const expectedDepositDate = SalesService.calculateExpectedDepositDate(orderDate, paymentType);
+
     // 주문 생성
     const orderStmt = db.prepare(
-      'INSERT INTO orders (total_amount) VALUES (?)'
+      'INSERT INTO orders (total_amount, payment_type, expected_deposit_date) VALUES (?, ?, ?)'
     );
-    orderStmt.run([totalAmount]);
+    orderStmt.run([totalAmount, paymentType, expectedDepositDate]);
     orderStmt.free();
 
     // 주문 ID 가져오기

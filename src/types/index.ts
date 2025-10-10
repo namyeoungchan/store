@@ -39,10 +39,16 @@ export interface InventoryWithDetails extends Inventory {
   ingredient_unit: string;
 }
 
+export type PaymentType = 'CARD' | 'COUPANG' | 'BAEMIN' | 'YOGIYO';
+
 export interface Order {
   id?: number;
   order_date?: string;
   total_amount: number;
+  payment_type: PaymentType;
+  expected_deposit_date?: string;
+  is_deposited?: boolean;
+  deposited_date?: string;
 }
 
 export interface OrderItem {
@@ -72,4 +78,28 @@ export interface InventoryHistory {
 export interface InventoryHistoryWithDetails extends InventoryHistory {
   ingredient_name: string;
   ingredient_unit: string;
+}
+
+export interface SalesAnalytics {
+  total_sales: number;
+  pending_deposits: number;
+  today_sales: number;
+  this_week_sales: number;
+  this_month_sales: number;
+  payment_type_breakdown: {
+    type: PaymentType;
+    amount: number;
+    count: number;
+  }[];
+}
+
+export interface DepositSchedule {
+  date: string;
+  total_amount: number;
+  orders: {
+    id: number;
+    payment_type: PaymentType;
+    amount: number;
+    order_date: string;
+  }[];
 }

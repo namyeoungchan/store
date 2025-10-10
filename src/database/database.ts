@@ -58,7 +58,11 @@ export const initDatabase = async () => {
       CREATE TABLE IF NOT EXISTS orders (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-          total_amount REAL NOT NULL DEFAULT 0
+          total_amount REAL NOT NULL DEFAULT 0,
+          payment_type TEXT NOT NULL DEFAULT 'CARD',
+          expected_deposit_date DATE,
+          is_deposited BOOLEAN DEFAULT 0,
+          deposited_date DATE
       );
 
       -- 주문 상세 테이블
