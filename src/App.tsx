@@ -5,8 +5,9 @@ import DashboardPage from './pages/DashboardPage';
 import { IngredientsPage } from './pages/IngredientsPage';
 import { MenusPage } from './pages/MenusPage';
 import InventoryPage from './pages/InventoryPage';
+import OrdersPage from './pages/OrdersPage';
 
-type PageType = 'dashboard' | 'ingredients' | 'menus' | 'inventory';
+type PageType = 'dashboard' | 'ingredients' | 'menus' | 'inventory' | 'orders';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('dashboard');
@@ -37,6 +38,8 @@ function App() {
         return <MenusPage />;
       case 'inventory':
         return <InventoryPage />;
+      case 'orders':
+        return <OrdersPage />;
       default:
         return <DashboardPage />;
     }
@@ -81,6 +84,12 @@ function App() {
             onClick={() => setCurrentPage('inventory')}
           >
             📦 재고 관리
+          </button>
+          <button
+            className={`nav-item ${currentPage === 'orders' ? 'active' : ''}`}
+            onClick={() => setCurrentPage('orders')}
+          >
+            🛒 주문 시스템
           </button>
         </div>
       </nav>

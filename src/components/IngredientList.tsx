@@ -4,7 +4,7 @@ import { Ingredient } from '../types';
 interface IngredientListProps {
   ingredients: Ingredient[];
   onEdit: (ingredient: Ingredient) => void;
-  onDelete: (id: number) => void;
+  onDelete: (ingredient: Ingredient) => void;
 }
 
 export const IngredientList: React.FC<IngredientListProps> = ({
@@ -19,9 +19,7 @@ export const IngredientList: React.FC<IngredientListProps> = ({
   );
 
   const handleDelete = (ingredient: Ingredient) => {
-    if (window.confirm(`'${ingredient.name}' 재료를 삭제하시겠습니까?`)) {
-      onDelete(ingredient.id!);
-    }
+    onDelete(ingredient);
   };
 
   return (

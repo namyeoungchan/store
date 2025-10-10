@@ -4,7 +4,7 @@ import { InventoryWithDetails } from '../types';
 interface InventoryListProps {
   inventory: InventoryWithDetails[];
   onSelectItem: (item: InventoryWithDetails) => void;
-  selectedItem?: InventoryWithDetails;
+  selectedItem: InventoryWithDetails | null;
 }
 
 export const InventoryList: React.FC<InventoryListProps> = ({

@@ -72,7 +72,74 @@ export class OrderService {
     return orderItems;
   }
 
-  static createOrder(orderItems: Array<{ menu_id: number; quantity: number; unit_price: number }>): number {
+  static createOrder(totalAmount: number): Order {
+    const db = getDatabase();
+
+    // 주문 생성
+    const orderStmt = db.prepare(
+      'INSERT INTO orders (total_amount) VALUES (?)'
+    );
+    orderStmt.run([totalAmount]);
+    orderStmt.free();
+
+    // 주문 ID 가져오기
+    const lastIdStmt = db.prepare('SELECT last_insert_rowid() as id');
+    lastIdStmt.step();
+    const result = lastIdStmt.getAsObject();
+    lastIdStmt.free();
+    const orderId = result.id as number;
+
+    // 생성된 주문 반환
+    return this.getOrderById(orderId)!;
+  }
+
+  static addOrderItem(orderItem: Omit<OrderItem, 'id'>): OrderItem {
+    const db = getDatabase();
+
+    const itemStmt = db.prepare(
+      'INSERT INTO order_items (order_id, menu_id, quantity, unit_price) VALUES (?, ?, ?, ?)'
+    );
+    itemStmt.run([orderItem.order_id, orderItem.menu_id, orderItem.quantity, orderItem.unit_price]);
+    itemStmt.free();
+
+    // 생성된 아이템 ID 가져오기
+    const lastIdStmt = db.prepare('SELECT last_insert_rowid() as id');
+    lastIdStmt.step();
+    const itemResult = lastIdStmt.getAsObject();
+    lastIdStmt.free();
+
+    return {
+      id: itemResult.id as number,
+      ...orderItem
+    };
+  }
+
+  static getOrderItemsWithDetails(orderId: number): OrderItemWithDetails[] {
+    return this.getOrderItemsByOrderId(orderId);
+  }
+
+  static updateOrderItemQuantity(itemId: number, newQuantity: number): void {
+    const db = getDatabase();
+    const stmt = db.prepare('UPDATE order_items SET quantity = ? WHERE id = ?');
+    stmt.run([newQuantity, itemId]);
+    stmt.free();
+  }
+
+  static updateOrderTotal(orderId: number, newTotal: number): void {
+    const db = getDatabase();
+    const stmt = db.prepare('UPDATE orders SET total_amount = ? WHERE id = ?');
+    stmt.run([newTotal, orderId]);
+    stmt.free();
+  }
+
+  static deleteOrderItem(itemId: number): void {
+    const db = getDatabase();
+    const stmt = db.prepare('DELETE FROM order_items WHERE id = ?');
+    stmt.run([itemId]);
+    stmt.free();
+  }
+
+  static createOrderWithItems(orderItems: Array<{ menu_id: number; quantity: number; unit_price: number }>): number {
     const db = getDatabase();
 
     // 주문 가능 여부 확인 (재고 체크)
