@@ -5,6 +5,7 @@ import { OrderService } from '../services/orderService';
 import { IngredientService } from '../services/ingredientService';
 import { MenuService } from '../services/menuService';
 import { SalesAnalytics, InventoryWithDetails, Order } from '../types';
+import { DepositScheduleWidget } from '../components/DepositScheduleWidget';
 
 const DashboardPage: React.FC = () => {
   const [salesAnalytics, setSalesAnalytics] = useState<SalesAnalytics | null>(null);
@@ -229,6 +230,12 @@ const DashboardPage: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Deposit Schedule */}
+        <DepositScheduleWidget
+          className="dashboard-deposit-widget"
+          onRefresh={loadDashboardData}
+        />
 
         {/* Recent Orders */}
         <div className="dashboard-card recent-orders">
@@ -719,6 +726,173 @@ const DashboardPage: React.FC = () => {
           color: var(--gray-600);
         }
 
+        /* Dashboard Deposit Widget Styles - Complete redesign for dashboard integration */
+        .dashboard-deposit-widget {
+          background: white;
+          border-radius: var(--radius-2xl);
+          box-shadow: var(--shadow-sm);
+          border: 1px solid var(--gray-200);
+          overflow: hidden;
+          transition: all var(--transition-fast);
+        }
+
+        .dashboard-deposit-widget:hover {
+          box-shadow: var(--shadow-lg);
+        }
+
+        .dashboard-deposit-widget .widget-header {
+          padding: var(--space-6);
+          border-bottom: 1px solid var(--gray-200);
+          background: var(--gray-50);
+          margin-bottom: 0;
+        }
+
+        .dashboard-deposit-widget .header-title {
+          margin-bottom: var(--space-2);
+        }
+
+        .dashboard-deposit-widget .title-icon {
+          font-size: 1.125rem;
+        }
+
+        .dashboard-deposit-widget .title-text {
+          color: var(--gray-900);
+          font-size: 1.125rem;
+          font-weight: 600;
+          margin: 0;
+        }
+
+        .dashboard-deposit-widget .total-amount {
+          align-items: flex-end;
+          gap: var(--space-1);
+        }
+
+        .dashboard-deposit-widget .amount-label {
+          color: var(--gray-600);
+          font-size: 0.75rem;
+          font-weight: 500;
+        }
+
+        .dashboard-deposit-widget .amount-value {
+          color: var(--success-600);
+          -webkit-text-fill-color: var(--success-600);
+          font-size: 1.25rem;
+          font-weight: 700;
+        }
+
+        .dashboard-deposit-widget .schedule-list {
+          padding: var(--space-6);
+          max-height: 350px;
+          gap: var(--space-3);
+        }
+
+        .dashboard-deposit-widget .schedule-item {
+          background: var(--gray-50);
+          border: 2px solid var(--gray-200);
+          border-radius: var(--radius-lg);
+          padding: var(--space-4);
+          transition: all var(--transition-fast);
+        }
+
+        .dashboard-deposit-widget .schedule-item:hover {
+          background: var(--gray-100);
+          border-color: var(--primary-400);
+          transform: translateY(-1px);
+          box-shadow: var(--shadow-md);
+        }
+
+        .dashboard-deposit-widget .schedule-item.active {
+          background: var(--primary-50);
+          border-color: var(--primary-500);
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+        }
+
+        .dashboard-deposit-widget .date-text {
+          color: var(--gray-900);
+          font-weight: 600;
+          font-size: 1rem;
+        }
+
+        .dashboard-deposit-widget .date-full {
+          color: var(--gray-500);
+          font-size: 0.75rem;
+        }
+
+        .dashboard-deposit-widget .schedule-amount {
+          color: var(--success-600);
+          font-weight: 700;
+          font-size: 1rem;
+        }
+
+        .dashboard-deposit-widget .schedule-count {
+          background: white;
+          color: var(--gray-600);
+          border: 1px solid var(--gray-200);
+          padding: var(--space-1) var(--space-2);
+          border-radius: var(--radius-sm);
+          font-size: 0.75rem;
+          font-weight: 500;
+        }
+
+        .dashboard-deposit-widget .expand-icon {
+          color: var(--gray-500);
+          font-size: 0.875rem;
+        }
+
+        .dashboard-deposit-widget .schedule-details {
+          margin: 0;
+          background: linear-gradient(135deg, var(--primary-50), var(--blue-50));
+          border: 1px solid var(--primary-200);
+          border-radius: 0;
+          padding: var(--space-6);
+          border-top: 1px solid var(--gray-200);
+        }
+
+        .dashboard-deposit-widget .details-header h4 {
+          color: var(--primary-700);
+          font-size: 1rem;
+          font-weight: 600;
+        }
+
+        .dashboard-deposit-widget .deposit-complete-btn {
+          background: linear-gradient(135deg, var(--success-500), var(--success-600));
+          font-size: 0.75rem;
+          padding: var(--space-2) var(--space-3);
+        }
+
+        .dashboard-deposit-widget .close-btn {
+          padding: var(--space-2);
+          font-size: 1rem;
+        }
+
+        .dashboard-deposit-widget .order-item {
+          background: white;
+          border: 1px solid var(--gray-200);
+          border-radius: var(--radius-md);
+          padding: var(--space-3);
+        }
+
+        .dashboard-deposit-widget .loading-state,
+        .dashboard-deposit-widget .empty-state {
+          padding: var(--space-8);
+          text-align: center;
+          color: var(--gray-500);
+        }
+
+        .dashboard-deposit-widget .empty-icon {
+          font-size: 2.5rem;
+          margin-bottom: var(--space-4);
+          opacity: 0.6;
+        }
+
+        .dashboard-deposit-widget .loading-spinner {
+          width: 32px;
+          height: 32px;
+          border: 2px solid var(--gray-200);
+          border-top: 2px solid var(--primary-500);
+          margin-bottom: var(--space-4);
+        }
+
         @media (max-width: 768px) {
           .modern-dashboard {
             padding: var(--space-4);
@@ -744,6 +918,57 @@ const DashboardPage: React.FC = () => {
 
           .system-stats {
             grid-template-columns: 1fr;
+          }
+
+          /* Mobile styles for deposit widget */
+          .dashboard-deposit-widget .widget-header {
+            padding: var(--space-4);
+            flex-direction: column;
+            gap: var(--space-2);
+            align-items: stretch;
+          }
+
+          .dashboard-deposit-widget .total-amount {
+            align-items: center;
+          }
+
+          .dashboard-deposit-widget .schedule-list {
+            padding: var(--space-4);
+            max-height: 300px;
+          }
+
+          .dashboard-deposit-widget .schedule-item {
+            grid-template-columns: 1fr auto;
+            gap: var(--space-2);
+            padding: var(--space-3);
+          }
+
+          .dashboard-deposit-widget .schedule-count,
+          .dashboard-deposit-widget .expand-icon {
+            display: none;
+          }
+
+          .dashboard-deposit-widget .schedule-details {
+            padding: var(--space-4);
+          }
+
+          .dashboard-deposit-widget .details-title {
+            flex-direction: column;
+            gap: var(--space-3);
+            align-items: stretch;
+          }
+
+          .dashboard-deposit-widget .details-actions {
+            justify-content: center;
+          }
+
+          .dashboard-deposit-widget .order-item {
+            grid-template-columns: 1fr auto;
+            gap: var(--space-2);
+          }
+
+          .dashboard-deposit-widget .order-time {
+            display: none;
           }
         }
       `}</style>

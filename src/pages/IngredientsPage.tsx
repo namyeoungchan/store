@@ -6,6 +6,7 @@ import { Ingredient } from '../types';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
+import { DepositScheduleWidget } from '../components/DepositScheduleWidget';
 
 export const IngredientsPage: React.FC = () => {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -182,31 +183,39 @@ export const IngredientsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="stats-grid">
-          <div className="stat-card total">
-            <div className="stat-icon">📦</div>
-            <div className="stat-content">
-              <div className="stat-number">{ingredients.length}</div>
-              <div className="stat-label">총 재료</div>
-            </div>
-          </div>
-          <div className="stat-card units">
-            <div className="stat-icon">📏</div>
-            <div className="stat-content">
-              <div className="stat-number">{Object.keys(unitStats).length}</div>
-              <div className="stat-label">단위 종류</div>
-            </div>
-          </div>
-          {topUnits.slice(0, 2).map(([unit, count], index) => (
-            <div key={unit} className={`stat-card unit-${index + 1}`}>
-              <div className="stat-icon">{getUnitIcon(unit)}</div>
-              <div className="stat-content">
-                <div className="stat-number">{count}</div>
-                <div className="stat-label">{unit}</div>
+        {/* Statistics Cards and Deposit Schedule */}
+        <div className="header-content-grid">
+          <div className="stats-section">
+            <div className="stats-grid">
+              <div className="stat-card total">
+                <div className="stat-icon">📦</div>
+                <div className="stat-content">
+                  <div className="stat-number">{ingredients.length}</div>
+                  <div className="stat-label">총 재료</div>
+                </div>
               </div>
+              <div className="stat-card units">
+                <div className="stat-icon">📏</div>
+                <div className="stat-content">
+                  <div className="stat-number">{Object.keys(unitStats).length}</div>
+                  <div className="stat-label">단위 종류</div>
+                </div>
+              </div>
+              {topUnits.slice(0, 2).map(([unit, count], index) => (
+                <div key={unit} className={`stat-card unit-${index + 1}`}>
+                  <div className="stat-icon">{getUnitIcon(unit)}</div>
+                  <div className="stat-content">
+                    <div className="stat-number">{count}</div>
+                    <div className="stat-label">{unit}</div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          {/*<div className="deposit-section">*/}
+          {/*  <DepositScheduleWidget className="header-deposit-widget" />*/}
+          {/*</div>*/}
         </div>
       </div>
 
@@ -637,11 +646,63 @@ export const IngredientsPage: React.FC = () => {
           cursor: not-allowed;
         }
 
+        /* Header Content Grid */
+        .header-content-grid {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 2rem;
+          align-items: start;
+        }
+
+        .stats-section {
+          min-width: 0;
+        }
+
+        .deposit-section {
+          min-width: 0;
+        }
+
         /* Statistics Grid */
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
           gap: 1.5rem;
+        }
+
+        .header-deposit-widget {
+          background: rgba(255, 255, 255, 0.15);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header-deposit-widget .title-text {
+          color: white;
+        }
+
+        .header-deposit-widget .amount-value {
+          color: white;
+          -webkit-text-fill-color: white;
+        }
+
+        .header-deposit-widget .schedule-item {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.2);
+          color: white;
+        }
+
+        .header-deposit-widget .date-text,
+        .header-deposit-widget .schedule-amount {
+          color: white;
+        }
+
+        .header-deposit-widget .date-full,
+        .header-deposit-widget .schedule-count {
+          color: rgba(255, 255, 255, 0.8);
+          background: rgba(255, 255, 255, 0.1);
+        }
+
+        .header-deposit-widget .expand-icon {
+          color: rgba(255, 255, 255, 0.8);
         }
 
         .stat-card {
@@ -1515,6 +1576,11 @@ export const IngredientsPage: React.FC = () => {
             flex-direction: column;
             gap: 1rem;
             text-align: center;
+          }
+
+          .header-content-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
           }
 
           .stats-grid {
