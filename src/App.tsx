@@ -65,45 +65,75 @@ function App() {
     <div className="App">
       <nav className="app-nav">
         <div className="nav-header">
-          <h1>🏪 매장 재고관리</h1>
+          <div className="brand">
+            <div className="brand-icon">🏪</div>
+            <div className="brand-content">
+              <h1 className="brand-title">매장 관리 시스템</h1>
+              <p className="brand-subtitle">Store Management</p>
+            </div>
+          </div>
         </div>
         <div className="nav-menu">
-          <button
-            className={`nav-item ${currentPage === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setCurrentPage('dashboard')}
-          >
-            📊 대시보드
-          </button>
-          <button
-            className={`nav-item ${currentPage === 'ingredients' ? 'active' : ''}`}
-            onClick={() => setCurrentPage('ingredients')}
-          >
-            🥬 재료 관리
-          </button>
-          <button
-            className={`nav-item ${currentPage === 'menus' ? 'active' : ''}`}
-            onClick={() => setCurrentPage('menus')}
-          >
-            🍽️ 메뉴 관리
-          </button>
-          <button
-            className={`nav-item ${currentPage === 'inventory' ? 'active' : ''}`}
-            onClick={() => setCurrentPage('inventory')}
-          >
-            📦 재고 관리
-          </button>
-          <button
-            className={`nav-item ${currentPage === 'orders' ? 'active' : ''}`}
-            onClick={() => setCurrentPage('orders')}
-          >
-            🛒 주문 시스템
-          </button>
-          <button
-            className={`nav-item ${currentPage === 'sales' ? 'active' : ''}`}
-            onClick={() => setCurrentPage('sales')}
-          >
-            💰 매출 관리
-          </button>
+          <div className="menu-section">
+            <div className="menu-label">대시보드</div>
+            <button
+              className={`nav-item ${currentPage === 'dashboard' ? 'active' : ''}`}
+              onClick={() => setCurrentPage('dashboard')}
+            >
+              <span className="nav-icon">📊</span>
+              <span className="nav-text">대시보드</span>
+            </button>
+          </div>
+
+          <div className="menu-section">
+            <div className="menu-label">운영 관리</div>
+            <button
+              className={`nav-item ${currentPage === 'ingredients' ? 'active' : ''}`}
+              onClick={() => setCurrentPage('ingredients')}
+            >
+              <span className="nav-icon">🥬</span>
+              <span className="nav-text">재료 관리</span>
+            </button>
+            <button
+              className={`nav-item ${currentPage === 'menus' ? 'active' : ''}`}
+              onClick={() => setCurrentPage('menus')}
+            >
+              <span className="nav-icon">🍽️</span>
+              <span className="nav-text">메뉴 관리</span>
+            </button>
+            <button
+              className={`nav-item ${currentPage === 'inventory' ? 'active' : ''}`}
+              onClick={() => setCurrentPage('inventory')}
+            >
+              <span className="nav-icon">📦</span>
+              <span className="nav-text">재고 관리</span>
+            </button>
+          </div>
+
+          <div className="menu-section">
+            <div className="menu-label">주문 & 매출</div>
+            <button
+              className={`nav-item ${currentPage === 'orders' ? 'active' : ''}`}
+              onClick={() => setCurrentPage('orders')}
+            >
+              <span className="nav-icon">🛒</span>
+              <span className="nav-text">주문 시스템</span>
+            </button>
+            <button
+              className={`nav-item ${currentPage === 'sales' ? 'active' : ''}`}
+              onClick={() => setCurrentPage('sales')}
+            >
+              <span className="nav-icon">💰</span>
+              <span className="nav-text">매출 관리</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="nav-footer">
+          <div className="version-info">
+            <span className="version-text">v1.0.0</span>
+            <span className="company">© Store System</span>
+          </div>
         </div>
       </nav>
 

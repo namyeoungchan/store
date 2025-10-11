@@ -75,152 +75,169 @@ const SalesDashboard: React.FC = () => {
 
   if (loading && !analytics) {
     return (
-      <div className="sales-dashboard loading">
-        <div className="loading-spinner">📊 매출 데이터를 불러오는 중...</div>
+      <div className="loading-screen">
+        <div className="loading-spinner"></div>
+        <p>매출 데이터를 불러오는 중...</p>
       </div>
     );
   }
 
   return (
-    <div className="sales-dashboard">
-      <div className="dashboard-header">
-        <h2>💰 매출 관리 대시보드</h2>
-        <button className="refresh-btn" onClick={loadData} disabled={loading}>
-          {loading ? '🔄 새로고침 중...' : '🔄 새로고침'}
+    <div className="modern-sales-dashboard">
+      <div className="page-header">
+        <div className="header-content">
+          <h1 className="page-title">
+            <span className="title-icon">💰</span>
+            매출 관리 대시보드
+          </h1>
+          <p className="page-subtitle">실시간 매출 현황과 입금 스케줄을 확인하세요</p>
+        </div>
+        <button className="action-button primary" onClick={loadData} disabled={loading}>
+          <span className="button-icon">🔄</span>
+          {loading ? '새로고침 중...' : '새로고침'}
         </button>
       </div>
 
       {analytics && (
         <>
           {/* 매출 요약 */}
-          <div className="analytics-section">
-            <h3>📈 매출 현황</h3>
-            <div className="analytics-grid">
-              <div className="analytics-card total-sales">
-                <div className="card-icon">💎</div>
-                <div className="card-content">
-                  <div className="card-value">₩{analytics.total_sales.toLocaleString()}</div>
-                  <div className="card-label">총 매출</div>
-                </div>
+          <div className="stats-grid">
+            <div className="stat-card primary-gradient">
+              <div className="stat-header">
+                <span className="stat-icon">💎</span>
+                <span className="stat-title">총 매출</span>
               </div>
+              <div className="stat-value">₩{analytics.total_sales.toLocaleString()}</div>
+              <div className="stat-trend positive">전체 누적 매출</div>
+            </div>
 
-              <div className="analytics-card pending-deposits">
-                <div className="card-icon">⏳</div>
-                <div className="card-content">
-                  <div className="card-value">₩{analytics.pending_deposits.toLocaleString()}</div>
-                  <div className="card-label">입금 대기</div>
-                </div>
+            <div className="stat-card warning-gradient">
+              <div className="stat-header">
+                <span className="stat-icon">⏳</span>
+                <span className="stat-title">입금 대기</span>
               </div>
+              <div className="stat-value">₩{analytics.pending_deposits.toLocaleString()}</div>
+              <div className="stat-trend">미입금 금액</div>
+            </div>
 
-              <div className="analytics-card today-sales">
-                <div className="card-icon">📅</div>
-                <div className="card-content">
-                  <div className="card-value">₩{analytics.today_sales.toLocaleString()}</div>
-                  <div className="card-label">오늘 매출</div>
-                </div>
+            <div className="stat-card success-gradient">
+              <div className="stat-header">
+                <span className="stat-icon">📅</span>
+                <span className="stat-title">오늘 매출</span>
               </div>
+              <div className="stat-value">₩{analytics.today_sales.toLocaleString()}</div>
+              <div className="stat-trend positive">일일 매출</div>
+            </div>
 
-              <div className="analytics-card week-sales">
-                <div className="card-icon">📊</div>
-                <div className="card-content">
-                  <div className="card-value">₩{analytics.this_week_sales.toLocaleString()}</div>
-                  <div className="card-label">이번 주 매출</div>
-                </div>
+            <div className="stat-card info-gradient">
+              <div className="stat-header">
+                <span className="stat-icon">📊</span>
+                <span className="stat-title">이번 주</span>
               </div>
+              <div className="stat-value">₩{analytics.this_week_sales.toLocaleString()}</div>
+              <div className="stat-trend">주간 매출</div>
+            </div>
 
-              <div className="analytics-card month-sales">
-                <div className="card-icon">🗓️</div>
-                <div className="card-content">
-                  <div className="card-value">₩{analytics.this_month_sales.toLocaleString()}</div>
-                  <div className="card-label">이번 달 매출</div>
-                </div>
+            <div className="stat-card secondary-gradient">
+              <div className="stat-header">
+                <span className="stat-icon">🗓️</span>
+                <span className="stat-title">이번 달</span>
               </div>
+              <div className="stat-value">₩{analytics.this_month_sales.toLocaleString()}</div>
+              <div className="stat-trend">월간 매출</div>
             </div>
           </div>
 
           {/* 결제 유형별 매출 */}
-          <div className="payment-breakdown-section">
-            <h3>🏪 결제 유형별 매출</h3>
-            <div className="payment-breakdown-grid">
-              {analytics.payment_type_breakdown.map(item => (
-                <div key={item.type} className="payment-breakdown-card">
-                  <div className="payment-icon">
-                    {SalesService.getPaymentTypeIcon(item.type)}
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">
+                <span className="title-icon">🏪</span>
+                결제 유형별 매출
+              </h2>
+            </div>
+            <div className="card-content">
+              <div className="payment-grid">
+                {analytics.payment_type_breakdown.map(item => (
+                  <div key={item.type} className="payment-card">
+                    <div className="payment-header">
+                      <span className="payment-icon">
+                        {SalesService.getPaymentTypeIcon(item.type)}
+                      </span>
+                      <span className="payment-name">
+                        {SalesService.getPaymentTypeDisplayName(item.type)}
+                      </span>
+                    </div>
+                    <div className="payment-amount">₩{item.amount.toLocaleString()}</div>
+                    <div className="payment-count">{item.count}건</div>
                   </div>
-                  <div className="payment-content">
-                    <div className="payment-name">
-                      {SalesService.getPaymentTypeDisplayName(item.type)}
-                    </div>
-                    <div className="payment-amount">
-                      ₩{item.amount.toLocaleString()}
-                    </div>
-                    <div className="payment-count">
-                      {item.count}건
-                    </div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </>
       )}
 
       {/* 입금 스케줄 */}
-      <div className="deposit-schedule-section">
-        <h3>💳 입금 예정 스케줄</h3>
-        {depositSchedule.length === 0 ? (
-          <div className="no-deposits">
-            <div className="no-deposits-icon">✅</div>
-            <p>입금 대기 중인 주문이 없습니다.</p>
-          </div>
-        ) : (
-          <div className="deposit-schedule-list">
-            {depositSchedule.map(schedule => (
-              <div key={schedule.date} className="deposit-schedule-item">
-                <div className="schedule-header">
-                  <div className="schedule-date">
-                    <span className="date-text">{schedule.date}</span>
-                    <span className="date-relative">({formatDate(schedule.date)})</span>
-                  </div>
-                  <div className="schedule-total">
-                    ₩{schedule.total_amount.toLocaleString()}
-                  </div>
-                  <button
-                    className="btn btn-primary btn-small"
-                    onClick={() => handleMarkDateAsDeposited(schedule.date)}
-                  >
-                    일괄 입금완료
-                  </button>
-                </div>
-                <div className="schedule-orders">
-                  {schedule.orders.map(order => (
-                    <div key={order.id} className="schedule-order">
-                      <div className="order-info">
-                        <span className="order-id">주문 #{order.id}</span>
-                        <span className="order-payment-type">
-                          {SalesService.getPaymentTypeIcon(order.payment_type)}
-                          {SalesService.getPaymentTypeDisplayName(order.payment_type)}
-                        </span>
-                        <span className="order-date">
-                          {new Date(order.order_date).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="order-amount">
-                        ₩{order.amount.toLocaleString()}
-                      </div>
-                      <button
-                        className="btn btn-secondary btn-small"
-                        onClick={() => handleMarkAsDeposited(order.id)}
-                      >
-                        입금완료
-                      </button>
+      <div className="card">
+        <div className="card-header">
+          <h2 className="card-title">
+            <span className="title-icon">💳</span>
+            입금 예정 스케줄
+          </h2>
+        </div>
+        <div className="card-content">
+          {depositSchedule.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">✅</div>
+              <h3>모든 입금이 완료되었습니다</h3>
+              <p>현재 입금 대기 중인 주문이 없습니다.</p>
+            </div>
+          ) : (
+            <div className="deposit-list">
+              {depositSchedule.map(schedule => (
+                <div key={schedule.date} className="deposit-item">
+                  <div className="deposit-header">
+                    <div className="deposit-date">
+                      <span className="date-main">{schedule.date}</span>
+                      <span className="date-relative">{formatDate(schedule.date)}</span>
                     </div>
-                  ))}
+                    <div className="deposit-amount">₩{schedule.total_amount.toLocaleString()}</div>
+                    <button
+                      className="action-button primary small"
+                      onClick={() => handleMarkDateAsDeposited(schedule.date)}
+                    >
+                      일괄 입금완료
+                    </button>
+                  </div>
+                  <div className="order-list">
+                    {schedule.orders.map(order => (
+                      <div key={order.id} className="order-item">
+                        <div className="order-details">
+                          <span className="order-id">주문 #{order.id}</span>
+                          <span className="order-type">
+                            {SalesService.getPaymentTypeIcon(order.payment_type)}
+                            {SalesService.getPaymentTypeDisplayName(order.payment_type)}
+                          </span>
+                          <span className="order-date">
+                            {new Date(order.order_date).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="order-amount">₩{order.amount.toLocaleString()}</div>
+                        <button
+                          className="action-button secondary small"
+                          onClick={() => handleMarkAsDeposited(order.id)}
+                        >
+                          입금완료
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Toast */}
@@ -233,340 +250,419 @@ const SalesDashboard: React.FC = () => {
       )}
 
       <style>{`
-        .sales-dashboard {
+        .modern-sales-dashboard {
+          padding: var(--space-8);
           max-width: 1400px;
           margin: 0 auto;
-          padding: 2rem;
-          background: #f8fafc;
+          background: var(--gray-50);
           min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-8);
         }
 
-        .dashboard-header {
+        .page-header {
           display: flex;
           justify-content: space-between;
-          align-items: center;
-          margin-bottom: 2rem;
+          align-items: flex-start;
           background: white;
-          padding: 1.5rem;
-          border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          padding: var(--space-8);
+          border-radius: var(--radius-xl);
+          box-shadow: var(--shadow-lg);
+          border: 1px solid var(--gray-200);
         }
 
-        .dashboard-header h2 {
+        .header-content {
+          flex: 1;
+        }
+
+        .page-title {
+          font-size: 2rem;
+          font-weight: 700;
+          color: var(--gray-900);
+          margin: 0 0 var(--space-2) 0;
+          display: flex;
+          align-items: center;
+          gap: var(--space-3);
+        }
+
+        .title-icon {
+          font-size: 2.5rem;
+        }
+
+        .page-subtitle {
+          color: var(--gray-600);
           margin: 0;
-          color: #1a202c;
-          font-size: 1.75rem;
+          font-size: 1.1rem;
         }
 
-        .refresh-btn {
-          background: #4f46e5;
+        .action-button {
+          background: var(--primary-600);
           color: white;
           border: none;
-          padding: 0.5rem 1rem;
-          border-radius: 8px;
+          padding: var(--space-4) var(--space-6);
+          border-radius: var(--radius-lg);
           cursor: pointer;
-          font-size: 0.9rem;
-          transition: all 0.2s;
+          font-weight: 600;
+          font-size: 0.95rem;
+          transition: all var(--transition-fast);
+          display: flex;
+          align-items: center;
+          gap: var(--space-2);
+          box-shadow: var(--shadow-md);
         }
 
-        .refresh-btn:hover:not(:disabled) {
-          background: #4338ca;
-          transform: translateY(-1px);
+        .action-button:hover:not(:disabled) {
+          background: var(--primary-700);
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-lg);
         }
 
-        .refresh-btn:disabled {
+        .action-button:disabled {
           opacity: 0.6;
           cursor: not-allowed;
         }
 
-        .analytics-section,
-        .payment-breakdown-section,
-        .deposit-schedule-section {
-          background: white;
-          border-radius: 12px;
-          padding: 1.5rem;
-          margin-bottom: 2rem;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        .action-button.small {
+          padding: var(--space-2) var(--space-4);
+          font-size: 0.85rem;
         }
 
-        .analytics-section h3,
-        .payment-breakdown-section h3,
-        .deposit-schedule-section h3 {
-          margin: 0 0 1.5rem 0;
-          color: #1a202c;
-          font-size: 1.25rem;
+        .action-button.secondary {
+          background: var(--gray-600);
         }
 
-        .analytics-grid {
+        .action-button.secondary:hover:not(:disabled) {
+          background: var(--gray-700);
+        }
+
+        .button-icon {
+          font-size: 1rem;
+        }
+
+        .stats-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 1rem;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: var(--space-6);
         }
 
-        .analytics-card {
+        .stat-card {
+          background: white;
+          border-radius: var(--radius-xl);
+          padding: var(--space-6);
+          box-shadow: var(--shadow-lg);
+          border: 1px solid var(--gray-200);
+          position: relative;
+          overflow: hidden;
+          transition: all var(--transition-fast);
+        }
+
+        .stat-card:hover {
+          transform: translateY(-4px);
+          box-shadow: var(--shadow-xl);
+        }
+
+        .stat-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
+        }
+
+        .stat-card.warning-gradient::before {
+          background: linear-gradient(90deg, var(--warning-500), var(--warning-600));
+        }
+
+        .stat-card.success-gradient::before {
+          background: linear-gradient(90deg, var(--success-500), var(--success-600));
+        }
+
+        .stat-card.info-gradient::before {
+          background: linear-gradient(90deg, var(--primary-400), var(--primary-500));
+        }
+
+        .stat-card.secondary-gradient::before {
+          background: linear-gradient(90deg, var(--gray-500), var(--gray-600));
+        }
+
+        .stat-header {
           display: flex;
           align-items: center;
-          padding: 1.5rem;
-          border-radius: 10px;
-          color: white;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          gap: var(--space-3);
+          margin-bottom: var(--space-4);
         }
 
-        .analytics-card.pending-deposits {
-          background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-
-        .analytics-card.today-sales {
-          background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        }
-
-        .analytics-card.week-sales {
-          background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-        }
-
-        .analytics-card.month-sales {
-          background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-        }
-
-        .card-icon {
+        .stat-icon {
           font-size: 2rem;
-          margin-right: 1rem;
+        }
+
+        .stat-title {
+          font-weight: 600;
+          color: var(--gray-700);
+          font-size: 0.95rem;
+        }
+
+        .stat-value {
+          font-size: 2rem;
+          font-weight: 700;
+          color: var(--gray-900);
+          margin-bottom: var(--space-2);
+        }
+
+        .stat-trend {
+          font-size: 0.85rem;
+          color: var(--gray-600);
+        }
+
+        .stat-trend.positive {
+          color: var(--success-600);
+        }
+
+        .card {
+          background: white;
+          border-radius: var(--radius-xl);
+          box-shadow: var(--shadow-lg);
+          border: 1px solid var(--gray-200);
+          overflow: hidden;
+        }
+
+        .card-header {
+          padding: var(--space-6) var(--space-8);
+          border-bottom: 1px solid var(--gray-200);
+          background: var(--gray-50);
+        }
+
+        .card-title {
+          margin: 0;
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: var(--gray-900);
+          display: flex;
+          align-items: center;
+          gap: var(--space-3);
         }
 
         .card-content {
-          flex: 1;
+          padding: var(--space-8);
         }
 
-        .card-value {
-          font-size: 1.25rem;
-          font-weight: bold;
-          margin-bottom: 0.25rem;
-        }
-
-        .card-label {
-          font-size: 0.85rem;
-          opacity: 0.9;
-        }
-
-        .payment-breakdown-grid {
+        .payment-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 1rem;
+          gap: var(--space-6);
         }
 
-        .payment-breakdown-card {
+        .payment-card {
+          padding: var(--space-6);
+          border: 2px solid var(--gray-200);
+          border-radius: var(--radius-lg);
+          transition: all var(--transition-fast);
+          background: var(--gray-50);
+        }
+
+        .payment-card:hover {
+          border-color: var(--primary-300);
+          background: white;
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-md);
+        }
+
+        .payment-header {
           display: flex;
           align-items: center;
-          padding: 1.5rem;
-          border: 1px solid #e2e8f0;
-          border-radius: 10px;
-          transition: all 0.2s;
-        }
-
-        .payment-breakdown-card:hover {
-          border-color: #4f46e5;
-          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+          gap: var(--space-3);
+          margin-bottom: var(--space-4);
         }
 
         .payment-icon {
-          font-size: 2rem;
-          margin-right: 1rem;
-        }
-
-        .payment-content {
-          flex: 1;
+          font-size: 1.5rem;
         }
 
         .payment-name {
           font-weight: 600;
-          color: #1a202c;
-          margin-bottom: 0.25rem;
+          color: var(--gray-800);
         }
 
         .payment-amount {
-          font-size: 1.1rem;
-          font-weight: bold;
-          color: #4f46e5;
-          margin-bottom: 0.25rem;
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: var(--primary-600);
+          margin-bottom: var(--space-1);
         }
 
         .payment-count {
           font-size: 0.85rem;
-          color: #6b7280;
+          color: var(--gray-600);
         }
 
-        .no-deposits {
+        .empty-state {
           text-align: center;
-          padding: 3rem;
-          color: #6b7280;
+          padding: var(--space-20);
+          color: var(--gray-600);
         }
 
-        .no-deposits-icon {
-          font-size: 3rem;
-          margin-bottom: 1rem;
+        .empty-icon {
+          font-size: 4rem;
+          margin-bottom: var(--space-4);
         }
 
-        .deposit-schedule-list {
+        .empty-state h3 {
+          margin: 0 0 var(--space-2) 0;
+          color: var(--gray-800);
+          font-size: 1.25rem;
+        }
+
+        .empty-state p {
+          margin: 0;
+          color: var(--gray-600);
+        }
+
+        .deposit-list {
           display: flex;
           flex-direction: column;
-          gap: 1rem;
+          gap: var(--space-6);
         }
 
-        .deposit-schedule-item {
-          border: 1px solid #e2e8f0;
-          border-radius: 10px;
+        .deposit-item {
+          border: 2px solid var(--gray-200);
+          border-radius: var(--radius-lg);
           overflow: hidden;
+          transition: all var(--transition-fast);
         }
 
-        .schedule-header {
+        .deposit-item:hover {
+          border-color: var(--primary-300);
+          box-shadow: var(--shadow-md);
+        }
+
+        .deposit-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 1rem 1.5rem;
-          background: #f8fafc;
-          border-bottom: 1px solid #e2e8f0;
+          padding: var(--space-6);
+          background: var(--gray-50);
+          border-bottom: 1px solid var(--gray-200);
         }
 
-        .schedule-date {
+        .deposit-date {
           display: flex;
           flex-direction: column;
+          gap: var(--space-1);
         }
 
-        .date-text {
-          font-weight: 600;
-          color: #1a202c;
+        .date-main {
+          font-weight: 700;
+          color: var(--gray-900);
+          font-size: 1.1rem;
         }
 
         .date-relative {
-          font-size: 0.8rem;
-          color: #6b7280;
+          font-size: 0.85rem;
+          color: var(--gray-600);
         }
 
-        .schedule-total {
-          font-size: 1.1rem;
-          font-weight: bold;
-          color: #4f46e5;
+        .deposit-amount {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: var(--primary-600);
         }
 
-        .schedule-orders {
-          padding: 1rem 1.5rem;
+        .order-list {
+          padding: var(--space-6);
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-4);
         }
 
-        .schedule-order {
+        .order-item {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 0.75rem 0;
-          border-bottom: 1px solid #f1f5f9;
+          padding: var(--space-4);
+          background: var(--gray-50);
+          border-radius: var(--radius-md);
+          border: 1px solid var(--gray-200);
         }
 
-        .schedule-order:last-child {
-          border-bottom: none;
-        }
-
-        .order-info {
+        .order-details {
           display: flex;
-          gap: 1rem;
+          gap: var(--space-4);
           align-items: center;
+          flex: 1;
         }
 
         .order-id {
           font-weight: 600;
-          color: #1a202c;
+          color: var(--gray-900);
         }
 
-        .order-payment-type {
-          font-size: 0.85rem;
-          color: #6b7280;
+        .order-type {
+          font-size: 0.9rem;
+          color: var(--gray-600);
+          display: flex;
+          align-items: center;
+          gap: var(--space-1);
         }
 
         .order-date {
-          font-size: 0.8rem;
-          color: #9ca3af;
+          font-size: 0.85rem;
+          color: var(--gray-500);
         }
 
         .order-amount {
           font-weight: 600;
-          color: #4f46e5;
-        }
-
-        .btn {
-          border: none;
-          border-radius: 6px;
-          padding: 0.5rem 1rem;
-          cursor: pointer;
-          font-size: 0.85rem;
-          font-weight: 500;
-          transition: all 0.2s;
-        }
-
-        .btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .btn-primary {
-          background: #4f46e5;
-          color: white;
-        }
-
-        .btn-secondary {
-          background: #6b7280;
-          color: white;
-        }
-
-        .btn-small {
-          padding: 0.375rem 0.75rem;
-          font-size: 0.8rem;
-        }
-
-        .loading {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          height: 50vh;
-        }
-
-        .loading-spinner {
-          font-size: 1.2rem;
-          color: #6b7280;
+          color: var(--primary-600);
+          margin-right: var(--space-4);
         }
 
         @media (max-width: 768px) {
-          .sales-dashboard {
-            padding: 1rem;
+          .modern-sales-dashboard {
+            padding: var(--space-4);
+            gap: var(--space-4);
           }
 
-          .dashboard-header {
+          .page-header {
             flex-direction: column;
-            gap: 1rem;
+            gap: var(--space-4);
+            align-items: stretch;
+          }
+
+          .stats-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .payment-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .deposit-header {
+            flex-direction: column;
+            gap: var(--space-4);
+            align-items: stretch;
+          }
+
+          .order-details {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: var(--space-1);
+          }
+
+          .order-item {
+            flex-direction: column;
+            align-items: stretch;
+            gap: var(--space-3);
+          }
+
+          .order-amount {
+            margin-right: 0;
             text-align: center;
           }
 
-          .analytics-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .payment-breakdown-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .schedule-header {
-            flex-direction: column;
-            gap: 1rem;
-            align-items: stretch;
-          }
-
-          .order-info {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.25rem;
-          }
-
-          .schedule-order {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 0.5rem;
+          .action-button {
+            justify-content: center;
           }
         }
       `}</style>

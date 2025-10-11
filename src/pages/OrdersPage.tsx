@@ -17,21 +17,29 @@ const OrdersPage: React.FC = () => {
   };
 
   return (
-    <div className="orders-page">
+    <div className="modern-orders-page">
       <div className="page-header">
-        <h1>🍽️ 주문 시스템</h1>
-        <div className="tabs">
+        <div className="header-content">
+          <h1 className="page-title">
+            <span className="title-icon">🍽️</span>
+            주문 시스템
+          </h1>
+          <p className="page-subtitle">메뉴 주문과 주문 내역을 관리하세요</p>
+        </div>
+        <div className="tab-navigation">
           <button
-            className={`tab ${activeTab === 'order' ? 'active' : ''}`}
+            className={`nav-tab ${activeTab === 'order' ? 'active' : ''}`}
             onClick={() => setActiveTab('order')}
           >
-            📝 새 주문
+            <span className="tab-icon">📝</span>
+            <span className="tab-text">새 주문</span>
           </button>
           <button
-            className={`tab ${activeTab === 'manage' ? 'active' : ''}`}
+            className={`nav-tab ${activeTab === 'manage' ? 'active' : ''}`}
             onClick={() => setActiveTab('manage')}
           >
-            📋 주문 관리
+            <span className="tab-icon">📋</span>
+            <span className="tab-text">주문 관리</span>
           </button>
         </div>
       </div>
@@ -52,70 +60,130 @@ const OrdersPage: React.FC = () => {
       </div>
 
       <style>{`
-        .orders-page {
+        .modern-orders-page {
+          padding: var(--space-8);
+          background: var(--gray-50);
           min-height: 100vh;
-          background-color: #f5f5f5;
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-8);
         }
 
         .page-header {
           background: white;
-          padding: 2rem;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          margin-bottom: 2rem;
-        }
-
-        .page-header h1 {
-          margin: 0 0 1.5rem 0;
-          color: #333;
-          text-align: center;
-        }
-
-        .tabs {
+          border-radius: var(--radius-xl);
+          box-shadow: var(--shadow-lg);
+          border: 1px solid var(--gray-200);
+          padding: var(--space-8);
           display: flex;
-          justify-content: center;
-          gap: 1rem;
+          justify-content: space-between;
+          align-items: flex-start;
         }
 
-        .tab {
-          background: #f8f9fa;
-          border: 2px solid #dee2e6;
-          border-radius: 25px;
-          padding: 0.75rem 2rem;
+        .header-content {
+          flex: 1;
+        }
+
+        .page-title {
+          font-size: 2rem;
+          font-weight: 700;
+          color: var(--gray-900);
+          margin: 0 0 var(--space-2) 0;
+          display: flex;
+          align-items: center;
+          gap: var(--space-3);
+        }
+
+        .title-icon {
+          font-size: 2.5rem;
+        }
+
+        .page-subtitle {
+          color: var(--gray-600);
+          margin: 0;
+          font-size: 1.1rem;
+        }
+
+        .tab-navigation {
+          display: flex;
+          gap: var(--space-2);
+          background: var(--gray-100);
+          padding: var(--space-1);
+          border-radius: var(--radius-lg);
+        }
+
+        .nav-tab {
+          display: flex;
+          align-items: center;
+          gap: var(--space-2);
+          padding: var(--space-3) var(--space-5);
+          border-radius: var(--radius-md);
+          background: transparent;
+          border: none;
           cursor: pointer;
-          font-size: 1rem;
           font-weight: 500;
-          transition: all 0.3s ease;
-          color: #6c757d;
+          color: var(--gray-600);
+          transition: all var(--transition-fast);
+          position: relative;
         }
 
-        .tab:hover {
-          background: #e9ecef;
-          transform: translateY(-2px);
+        .nav-tab:hover {
+          color: var(--gray-800);
+          background: var(--gray-200);
         }
 
-        .tab.active {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border-color: #667eea;
+        .nav-tab.active {
+          background: var(--primary-600);
           color: white;
-          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+          box-shadow: var(--shadow-md);
+        }
+
+        .nav-tab.active:hover {
+          background: var(--primary-700);
+          color: white;
+        }
+
+        .tab-icon {
+          font-size: 1.2rem;
+        }
+
+        .tab-text {
+          font-size: 0.95rem;
         }
 
         .page-content {
-          min-height: calc(100vh - 200px);
+          flex: 1;
+          min-height: 600px;
         }
 
         @media (max-width: 768px) {
+          .modern-orders-page {
+            padding: var(--space-4);
+            gap: var(--space-4);
+          }
+
           .page-header {
-            padding: 1rem;
-          }
-
-          .tabs {
             flex-direction: column;
-            align-items: center;
+            gap: var(--space-6);
+            align-items: stretch;
           }
 
-          .tab {
-            width: 200px;
+          .tab-navigation {
+            justify-content: center;
+          }
+
+          .nav-tab {
+            flex: 1;
+            justify-content: center;
+            min-width: 120px;
+          }
+
+          .page-title {
+            font-size: 1.5rem;
+            justify-content: center;
+          }
+
+          .page-subtitle {
             text-align: center;
           }
         }
