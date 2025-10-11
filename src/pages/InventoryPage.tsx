@@ -395,27 +395,148 @@ const InventoryPage: React.FC = () => {
         {/* 재고 등록 탭 */}
         {activeTab === 'register' && (
           <div className="register-section">
-            <div className="register-card">
-              <div className="register-header">
-                <h2>새 재고 등록</h2>
-                <p>새로운 재료의 재고를 등록하거나 기존 재고를 수정합니다</p>
+            {/* Quick Stats */}
+            <div className="register-stats">
+              <div className="quick-stat-card">
+                <div className="stat-icon">📦</div>
+                <div className="stat-info">
+                  <div className="stat-number">{inventory.length}</div>
+                  <div className="stat-label">관리 중인 재료</div>
+                </div>
+              </div>
+              <div className="quick-stat-card warning">
+                <div className="stat-icon">⚠️</div>
+                <div className="stat-info">
+                  <div className="stat-number">{lowStockItems.length}</div>
+                  <div className="stat-label">부족 재고</div>
+                </div>
+              </div>
+              <div className="quick-stat-card danger">
+                <div className="stat-icon">🚨</div>
+                <div className="stat-info">
+                  <div className="stat-number">{outOfStockItems.length}</div>
+                  <div className="stat-label">품절</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Registration Area */}
+            <div className="register-main">
+              {/* Material Selection */}
+              <div className="material-selection">
+                <div className="selection-header">
+                  <h3>🎯 재료 선택</h3>
+                  <p>재고를 관리할 재료를 선택하세요</p>
+                </div>
+
+                <div className="material-grid">
+                  {inventory.map(item => {
+                    const status = getStockStatus(item);
+                    return (
+                      <div
+                        key={item.id}
+                        className={`material-item ${status} ${selectedItem?.id === item.id ? 'selected' : ''}`}
+                        onClick={() => handleSelectItem(item)}
+                      >
+                        <div className="material-header">
+                          <span className="material-name">{item.ingredient_name}</span>
+                          <span className={`status-dot ${status}`}></span>
+                        </div>
+                        <div className="material-stock">
+                          <span className="current">{item.current_stock}</span>
+                          <span className="unit">{item.ingredient_unit}</span>
+                          <span className="min-info">최소: {item.min_stock}</span>
+                        </div>
+                        <div className="material-status">
+                          <span className={`status-text ${status}`}>
+                            {getStatusText(status)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              <div className="register-content">
-                {selectedItem ? (
-                  <InventoryForm
-                    inventory={selectedItem}
-                    onUpdateStock={handleUpdateStock}
-                    onUpdateMinStock={handleUpdateMinStock}
-                  />
-                ) : (
-                  <div className="select-prompt">
-                    <div className="prompt-icon">👆</div>
-                    <h3>재료를 선택해주세요</h3>
-                    <p>재고현황 탭에서 관리할 재료를 먼저 선택해주세요</p>
+              {/* Registration Form */}
+              {selectedItem && (
+                <div className="register-form-area">
+                  <div className="form-header">
+                    <div className="selected-material">
+                      <div className="material-info">
+                        <h3>📝 재고 관리</h3>
+                        <div className="material-detail">
+                          <span className="name">{selectedItem.ingredient_name}</span>
+                          <span className="unit">({selectedItem.ingredient_unit})</span>
+                          <span className={`status ${getStockStatus(selectedItem)}`}>
+                            {getStatusText(getStockStatus(selectedItem))}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="current-info">
+                        <div className="info-item">
+                          <span className="label">현재 재고</span>
+                          <span className="value">{selectedItem.current_stock} {selectedItem.ingredient_unit}</span>
+                        </div>
+                        <div className="info-item">
+                          <span className="label">최소 재고</span>
+                          <span className="value">{selectedItem.min_stock} {selectedItem.ingredient_unit}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  <div className="form-content">
+                    <InventoryForm
+                      inventory={selectedItem}
+                      onUpdateStock={handleUpdateStock}
+                      onUpdateMinStock={handleUpdateMinStock}
+                    />
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="quick-actions">
+                    <h4>⚡ 빠른 작업</h4>
+                    <div className="action-buttons">
+                      <button
+                        className="quick-btn in"
+                        onClick={() => handleUpdateStock(selectedItem.ingredient_id, 10, 'IN', '빠른 입고')}
+                      >
+                        <span>📥</span>
+                        +10 입고
+                      </button>
+                      <button
+                        className="quick-btn out"
+                        onClick={() => handleUpdateStock(selectedItem.ingredient_id, 5, 'OUT', '빠른 출고')}
+                      >
+                        <span>📤</span>
+                        -5 출고
+                      </button>
+                      <button
+                        className="quick-btn reset"
+                        onClick={() => handleUpdateMinStock(selectedItem.ingredient_id, selectedItem.current_stock)}
+                      >
+                        <span>🔄</span>
+                        최소재고 현재값으로
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!selectedItem && (
+                <div className="register-empty">
+                  <div className="empty-content">
+                    <div className="empty-icon">🎯</div>
+                    <h3>재료를 선택해주세요</h3>
+                    <p>위에서 재고를 관리할 재료를 선택하면<br />상세한 재고 관리 도구가 나타납니다</p>
+                    <div className="selection-hint">
+                      <span className="hint-item">💡 팁: 부족한 재고부터 관리해보세요</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1011,46 +1132,384 @@ const InventoryPage: React.FC = () => {
         }
 
         /* Register Section */
-        .register-card {
-          background: white;
-          border-radius: 20px;
-          padding: 2rem;
-          border: 2px solid #e2e8f0;
-          max-width: 600px;
-          margin: 0 auto;
+        .register-section {
+          padding: 1.5rem;
         }
 
-        .register-header {
-          text-align: center;
+        .register-stats {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1rem;
           margin-bottom: 2rem;
         }
 
-        .register-header h2 {
-          margin: 0 0 0.5rem 0;
+        .quick-stat-card {
+          background: white;
+          border: 2px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 1.25rem;
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          transition: all 0.3s ease;
+        }
+
+        .quick-stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+
+        .quick-stat-card.warning {
+          border-color: #f59e0b;
+          background: linear-gradient(135deg, #fef3c7, #fff);
+        }
+
+        .quick-stat-card.danger {
+          border-color: #ef4444;
+          background: linear-gradient(135deg, #fee2e2, #fff);
+        }
+
+        .quick-stat-card .stat-icon {
+          font-size: 2rem;
+        }
+
+        .quick-stat-card .stat-number {
           font-size: 1.5rem;
+          font-weight: 700;
+          color: #1e293b;
+          margin-bottom: 0.25rem;
+        }
+
+        .quick-stat-card .stat-label {
+          font-size: 0.875rem;
+          color: #64748b;
+        }
+
+        .register-main {
+          background: white;
+          border-radius: 20px;
+          border: 2px solid #e2e8f0;
+          overflow: hidden;
+        }
+
+        /* Material Selection */
+        .material-selection {
+          padding: 2rem;
+          border-bottom: 2px solid #f1f5f9;
+        }
+
+        .selection-header {
+          margin-bottom: 1.5rem;
+        }
+
+        .selection-header h3 {
+          margin: 0 0 0.5rem 0;
+          font-size: 1.25rem;
           font-weight: 700;
           color: #1e293b;
         }
 
-        .register-header p {
+        .selection-header p {
           margin: 0;
           color: #64748b;
         }
 
-        .select-prompt {
-          text-align: center;
-          padding: 3rem;
+        .material-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+          gap: 1rem;
+        }
+
+        .material-item {
+          background: #f8fafc;
+          border: 2px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 1rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          position: relative;
+        }
+
+        .material-item::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          border-radius: 16px 16px 0 0;
+          background: #e2e8f0;
+          transition: all 0.3s ease;
+        }
+
+        .material-item.good::before { background: #10b981; }
+        .material-item.low::before { background: #f59e0b; }
+        .material-item.out::before { background: #ef4444; }
+
+        .material-item:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+          border-color: #3b82f6;
+        }
+
+        .material-item.selected {
+          background: linear-gradient(135deg, #dbeafe, #f0f9ff);
+          border-color: #3b82f6;
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+        }
+
+        .material-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.75rem;
+        }
+
+        .material-name {
+          font-weight: 600;
+          color: #1e293b;
+          font-size: 1rem;
+        }
+
+        .status-dot {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+
+        .status-dot.good { background: #10b981; }
+        .status-dot.low { background: #f59e0b; }
+        .status-dot.out { background: #ef4444; }
+
+        .material-stock {
+          display: flex;
+          align-items: baseline;
+          gap: 0.5rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .material-stock .current {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+        .material-stock .unit {
+          color: #64748b;
+          font-size: 0.875rem;
+        }
+
+        .material-stock .min-info {
+          color: #94a3b8;
+          font-size: 0.75rem;
+          margin-left: auto;
+        }
+
+        .material-status {
+          text-align: right;
+        }
+
+        .status-text {
+          padding: 0.25rem 0.5rem;
+          border-radius: 8px;
+          font-size: 0.75rem;
+          font-weight: 600;
+        }
+
+        .status-text.good {
+          background: #dcfce7;
+          color: #15803d;
+        }
+
+        .status-text.low {
+          background: #fef3c7;
+          color: #d97706;
+        }
+
+        .status-text.out {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+
+        /* Registration Form Area */
+        .register-form-area {
+          padding: 2rem;
+        }
+
+        .form-header {
+          margin-bottom: 2rem;
+        }
+
+        .selected-material {
+          background: #f8fafc;
+          border: 2px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 1.5rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+        }
+
+        .material-info h3 {
+          margin: 0 0 0.75rem 0;
+          font-size: 1.125rem;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .material-detail {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .material-detail .name {
+          font-size: 1.125rem;
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+        .material-detail .unit {
           color: #64748b;
         }
 
-        .prompt-icon {
+        .material-detail .status {
+          padding: 0.25rem 0.75rem;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: 600;
+        }
+
+        .current-info {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          text-align: right;
+        }
+
+        .info-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .info-item .label {
+          font-size: 0.875rem;
+          color: #64748b;
+        }
+
+        .info-item .value {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .form-content {
+          margin: 2rem 0;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+          background: #f8fafc;
+          border: 2px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 1.5rem;
+          margin-top: 2rem;
+        }
+
+        .quick-actions h4 {
+          margin: 0 0 1rem 0;
+          font-size: 1rem;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .action-buttons {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 1rem;
+        }
+
+        .quick-btn {
+          background: white;
+          border: 2px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 0.75rem 1rem;
+          cursor: pointer;
+          font-size: 0.875rem;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          transition: all 0.2s ease;
+        }
+
+        .quick-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .quick-btn.in:hover {
+          background: #dcfce7;
+          border-color: #10b981;
+          color: #15803d;
+        }
+
+        .quick-btn.out:hover {
+          background: #fef3c7;
+          border-color: #f59e0b;
+          color: #d97706;
+        }
+
+        .quick-btn.reset:hover {
+          background: #e0e7ff;
+          border-color: #3b82f6;
+          color: #1d4ed8;
+        }
+
+        /* Empty State */
+        .register-empty {
+          padding: 4rem 2rem;
+          text-align: center;
+        }
+
+        .empty-content {
+          max-width: 400px;
+          margin: 0 auto;
+        }
+
+        .empty-icon {
           font-size: 4rem;
           margin-bottom: 1rem;
         }
 
-        .select-prompt h3 {
-          margin: 0 0 0.5rem 0;
+        .register-empty h3 {
+          margin: 0 0 1rem 0;
+          font-size: 1.5rem;
+          font-weight: 600;
           color: #475569;
+        }
+
+        .register-empty p {
+          margin: 0 0 1.5rem 0;
+          color: #64748b;
+          line-height: 1.6;
+        }
+
+        .selection-hint {
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+          border-radius: 12px;
+          padding: 1rem;
+          color: #0369a1;
+        }
+
+        .hint-item {
+          font-size: 0.875rem;
+          font-weight: 500;
         }
 
         /* Empty State */
@@ -1149,6 +1608,28 @@ const InventoryPage: React.FC = () => {
           }
 
           .ingredients-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .register-stats {
+            grid-template-columns: 1fr;
+          }
+
+          .material-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .selected-material {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: left;
+          }
+
+          .current-info {
+            text-align: left;
+          }
+
+          .action-buttons {
             grid-template-columns: 1fr;
           }
         }

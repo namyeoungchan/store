@@ -354,31 +354,184 @@ export const IngredientsPage: React.FC = () => {
 
         {/* 재료 등록/수정 탭 */}
         {activeTab === 'add' && (
-          <div className="form-section">
-            <div className="form-card">
-              <div className="form-header">
-                <h2>{editingIngredient ? '재료 정보 수정' : '새 재료 등록'}</h2>
-                <p>{editingIngredient ? '재료 정보를 수정하고 저장하세요' : '새로운 재료를 시스템에 등록하세요'}</p>
+          <div className="trendy-form-section">
+            {/* Progress Steps */}
+            <div className="form-progress">
+              <div className="progress-steps">
+                <div className="step completed">
+                  <div className="step-circle">
+                    <span className="step-icon">📝</span>
+                  </div>
+                  <div className="step-label">정보 입력</div>
+                </div>
+                <div className="step-line"></div>
+                <div className="step">
+                  <div className="step-circle">
+                    <span className="step-icon">✅</span>
+                  </div>
+                  <div className="step-label">완료</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Hero Section */}
+            <div className="form-hero">
+              <div className="hero-content">
+                <div className="hero-icon">
+                  {editingIngredient ? '✏️' : '🌟'}
+                </div>
+                <h1 className="hero-title">
+                  {editingIngredient ? '재료 정보 수정' : '새로운 재료 등록'}
+                </h1>
+                <p className="hero-subtitle">
+                  {editingIngredient
+                    ? `'${editingIngredient.name}' 재료의 정보를 수정하고 저장하세요`
+                    : '시스템에 새로운 재료를 추가하여 재고 관리를 시작하세요'
+                  }
+                </p>
                 {editingIngredient && (
-                  <button
-                    className="cancel-btn"
-                    onClick={cancelEdit}
-                    disabled={loading}
-                  >
-                    <span>✕</span>
-                    취소
-                  </button>
+                  <div className="editing-badge">
+                    <span className="badge-icon">🔄</span>
+                    <span className="badge-text">수정 모드</span>
+                  </div>
                 )}
               </div>
 
-              <div className="form-content">
-                <IngredientForm
-                  onSubmit={editingIngredient ? handleEditIngredientWithTabSwitch : handleAddIngredientWithTabSwitch}
-                  initialData={editingIngredient || undefined}
-                  isEditing={!!editingIngredient}
-                  onCancel={cancelEdit}
-                />
+              {editingIngredient && (
+                <button
+                  className="hero-cancel-btn"
+                  onClick={cancelEdit}
+                  disabled={loading}
+                >
+                  <span className="cancel-icon">✕</span>
+                  <span className="cancel-text">취소</span>
+                </button>
+              )}
+            </div>
+
+            {/* Form Container */}
+            <div className="modern-form-container">
+              <div className="form-wrapper">
+                {/* Form Stats */}
+                <div className="form-stats">
+                  <div className="stat-item">
+                    <div className="stat-icon">📊</div>
+                    <div className="stat-content">
+                      <div className="stat-number">{ingredients.length}</div>
+                      <div className="stat-label">등록된 재료</div>
+                    </div>
+                  </div>
+                  <div className="stat-item">
+                    <div className="stat-icon">📏</div>
+                    <div className="stat-content">
+                      <div className="stat-number">{Object.keys(unitStats).length}</div>
+                      <div className="stat-label">사용 중인 단위</div>
+                    </div>
+                  </div>
+                  <div className="stat-item">
+                    <div className="stat-icon">⭐</div>
+                    <div className="stat-content">
+                      <div className="stat-number">{editingIngredient ? '수정' : '신규'}</div>
+                      <div className="stat-label">작업 유형</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Form Content */}
+                <div className="enhanced-form-content">
+                  <div className="form-intro">
+                    <div className="intro-card">
+                      <div className="intro-header">
+                        <span className="intro-icon">💡</span>
+                        <span className="intro-title">재료 등록 가이드</span>
+                      </div>
+                      <div className="intro-tips">
+                        <div className="tip-item">
+                          <span className="tip-bullet">•</span>
+                          <span className="tip-text">재료명은 고유해야 합니다</span>
+                        </div>
+                        <div className="tip-item">
+                          <span className="tip-bullet">•</span>
+                          <span className="tip-text">적절한 단위를 선택하세요 (kg, L, 개 등)</span>
+                        </div>
+                        <div className="tip-item">
+                          <span className="tip-bullet">•</span>
+                          <span className="tip-text">등록 후 재고 관리가 가능합니다</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Form Card */}
+                  <div className="premium-form-card">
+                    <div className="form-card-header">
+                      <div className="header-left">
+                        <div className="form-icon">{editingIngredient ? '📝' : '➕'}</div>
+                        <div className="header-text">
+                          <h3>{editingIngredient ? '재료 수정' : '재료 등록'}</h3>
+                          <p>필수 정보를 입력해주세요</p>
+                        </div>
+                      </div>
+                      <div className="header-right">
+                        <div className="form-status">
+                          <div className={`status-dot ${editingIngredient ? 'editing' : 'creating'}`}></div>
+                          <span className="status-text">
+                            {editingIngredient ? '수정 중' : '등록 중'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="form-card-content">
+                      <IngredientForm
+                        onSubmit={editingIngredient ? handleEditIngredientWithTabSwitch : handleAddIngredientWithTabSwitch}
+                        initialData={editingIngredient || undefined}
+                        isEditing={!!editingIngredient}
+                        onCancel={cancelEdit}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Success Expectations */}
+                  <div className="success-preview">
+                    <div className="preview-header">
+                      <span className="preview-icon">🎉</span>
+                      <span className="preview-title">등록 완료 후</span>
+                    </div>
+                    <div className="preview-benefits">
+                      <div className="benefit-item">
+                        <span className="benefit-icon">📦</span>
+                        <span className="benefit-text">재고 관리 시스템에 자동 추가</span>
+                      </div>
+                      <div className="benefit-item">
+                        <span className="benefit-icon">📊</span>
+                        <span className="benefit-text">통계 및 분석 데이터에 반영</span>
+                      </div>
+                      <div className="benefit-item">
+                        <span className="benefit-icon">🔔</span>
+                        <span className="benefit-text">재고 부족 알림 설정 가능</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              {/* Loading Overlay */}
+              {loading && (
+                <div className="premium-loading-overlay">
+                  <div className="loading-content">
+                    <div className="loading-spinner-premium">
+                      <div className="spinner-ring"></div>
+                      <div className="spinner-ring"></div>
+                      <div className="spinner-ring"></div>
+                    </div>
+                    <h3 className="loading-title">
+                      {editingIngredient ? '수정 중...' : '등록 중...'}
+                    </h3>
+                    <p className="loading-message">잠시만 기다려주세요</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -803,66 +956,490 @@ export const IngredientsPage: React.FC = () => {
           color: #dc2626;
         }
 
-        /* Form Section */
-        .form-section {
-          padding: 2rem;
-        }
-
-        .form-card {
-          background: white;
-          border-radius: 20px;
-          padding: 2rem;
-          border: 2px solid #e2e8f0;
-          max-width: 600px;
+        /* Trendy Form Section */
+        .trendy-form-section {
+          padding: 1.5rem;
+          max-width: 1000px;
           margin: 0 auto;
-          position: relative;
         }
 
-        .form-header {
-          text-align: center;
+        /* Progress Steps */
+        .form-progress {
           margin-bottom: 2rem;
+        }
+
+        .progress-steps {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 1rem;
+          max-width: 300px;
+          margin: 0 auto;
+        }
+
+        .step {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .step-circle {
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          background: #f1f5f9;
+          border: 2px solid #e2e8f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s ease;
+        }
+
+        .step.completed .step-circle {
+          background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+          border-color: #3b82f6;
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+        }
+
+        .step-icon {
+          font-size: 1.25rem;
+        }
+
+        .step.completed .step-icon {
+          filter: brightness(0) invert(1);
+        }
+
+        .step-label {
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: #64748b;
+        }
+
+        .step.completed .step-label {
+          color: #3b82f6;
+          font-weight: 600;
+        }
+
+        .step-line {
+          width: 60px;
+          height: 2px;
+          background: linear-gradient(90deg, #3b82f6, #e2e8f0);
+          border-radius: 1px;
+        }
+
+        /* Hero Section */
+        .form-hero {
+          background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+          border-radius: 24px;
+          padding: 3rem 2rem;
+          margin-bottom: 2rem;
+          text-align: center;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .form-hero::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          right: -50%;
+          width: 200%;
+          height: 200%;
+          background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+          animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translate(-10px, -10px) rotate(0deg); }
+          50% { transform: translate(10px, 10px) rotate(5deg); }
+        }
+
+        .hero-content {
+          position: relative;
+          z-index: 2;
+        }
+
+        .hero-icon {
+          font-size: 4rem;
+          margin-bottom: 1rem;
+          filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+        }
+
+        .hero-title {
+          font-size: 2.5rem;
+          font-weight: 800;
+          margin: 0 0 1rem 0;
+          background: linear-gradient(135deg, #1e293b, #3b82f6);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          line-height: 1.2;
+        }
+
+        .hero-subtitle {
+          font-size: 1.1rem;
+          color: #64748b;
+          margin: 0 0 1.5rem 0;
+          max-width: 500px;
+          margin-left: auto;
+          margin-right: auto;
+          line-height: 1.6;
+        }
+
+        .editing-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          background: linear-gradient(135deg, #f59e0b, #d97706);
+          color: white;
+          padding: 0.5rem 1rem;
+          border-radius: 20px;
+          font-size: 0.875rem;
+          font-weight: 600;
+          box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
+        }
+
+        .hero-cancel-btn {
+          position: absolute;
+          top: 1rem;
+          right: 1rem;
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          border-radius: 12px;
+          padding: 0.75rem 1rem;
+          cursor: pointer;
+          color: #ef4444;
+          font-weight: 500;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          z-index: 3;
+        }
+
+        .hero-cancel-btn:hover:not(:disabled) {
+          background: #fee2e2;
+          border-color: #ef4444;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+        }
+
+        .hero-cancel-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        /* Modern Form Container */
+        .modern-form-container {
           position: relative;
         }
 
-        .form-header h2 {
-          margin: 0 0 0.5rem 0;
-          font-size: 1.75rem;
+        .form-wrapper {
+          background: white;
+          border-radius: 24px;
+          overflow: hidden;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+          border: 1px solid #e2e8f0;
+        }
+
+        /* Form Stats */
+        .form-stats {
+          background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+          padding: 1.5rem 2rem;
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1rem;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .stat-item {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          padding: 1rem;
+          background: rgba(255, 255, 255, 0.7);
+          border-radius: 16px;
+          transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+          transform: translateY(-2px);
+          background: white;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .stat-icon {
+          font-size: 1.5rem;
+        }
+
+        .stat-number {
+          font-size: 1.25rem;
           font-weight: 700;
           color: #1e293b;
         }
 
-        .form-header p {
-          margin: 0;
+        .stat-label {
+          font-size: 0.75rem;
           color: #64748b;
+          margin-top: 0.25rem;
+        }
+
+        /* Enhanced Form Content */
+        .enhanced-form-content {
+          padding: 2rem;
+        }
+
+        /* Form Intro */
+        .form-intro {
+          margin-bottom: 2rem;
+        }
+
+        .intro-card {
+          background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+          border: 1px solid #bae6fd;
+          border-radius: 16px;
+          padding: 1.5rem;
+        }
+
+        .intro-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 1rem;
+        }
+
+        .intro-title {
+          font-weight: 600;
+          color: #0369a1;
           font-size: 1rem;
         }
 
-        .cancel-btn {
-          position: absolute;
-          top: 0;
-          right: 0;
-          background: #f1f5f9;
-          border: 2px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 0.5rem;
-          cursor: pointer;
-          color: #64748b;
-          font-size: 1.2rem;
-          transition: all 0.2s ease;
+        .intro-tips {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .tip-item {
           display: flex;
           align-items: center;
-          gap: 0.25rem;
+          gap: 0.5rem;
         }
 
-        .cancel-btn:hover:not(:disabled) {
-          background: #fee2e2;
-          border-color: #ef4444;
-          color: #dc2626;
+        .tip-bullet {
+          color: #0369a1;
+          font-weight: 700;
         }
 
-        .cancel-btn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
+        .tip-text {
+          color: #0c4a6e;
+          font-size: 0.875rem;
+        }
+
+        /* Premium Form Card */
+        .premium-form-card {
+          background: white;
+          border: 2px solid #e2e8f0;
+          border-radius: 20px;
+          overflow: hidden;
+          margin-bottom: 2rem;
+          transition: all 0.3s ease;
+        }
+
+        .premium-form-card:hover {
+          border-color: #3b82f6;
+          box-shadow: 0 8px 24px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-card-header {
+          background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+          padding: 1.5rem 2rem;
+          border-bottom: 1px solid #e2e8f0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .header-left {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .form-icon {
+          width: 50px;
+          height: 50px;
+          background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.5rem;
+          filter: brightness(0) invert(1);
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+        }
+
+        .header-text h3 {
+          margin: 0 0 0.25rem 0;
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+        .header-text p {
+          margin: 0;
+          color: #64748b;
+          font-size: 0.875rem;
+        }
+
+        .form-status {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .status-dot {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          animation: pulse 2s infinite;
+        }
+
+        .status-dot.editing {
+          background: #f59e0b;
+        }
+
+        .status-dot.creating {
+          background: #10b981;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+
+        .status-text {
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: #475569;
+        }
+
+        .form-card-content {
+          padding: 2rem;
+        }
+
+        /* Success Preview */
+        .success-preview {
+          background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+          border: 1px solid #bbf7d0;
+          border-radius: 16px;
+          padding: 1.5rem;
+        }
+
+        .preview-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 1rem;
+        }
+
+        .preview-title {
+          font-weight: 600;
+          color: #15803d;
+          font-size: 1rem;
+        }
+
+        .preview-benefits {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+
+        .benefit-item {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .benefit-icon {
+          font-size: 1.1rem;
+        }
+
+        .benefit-text {
+          color: #166534;
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+
+        /* Premium Loading Overlay */
+        .premium-loading-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 24px;
+          z-index: 100;
+        }
+
+        .loading-content {
+          text-align: center;
+          max-width: 300px;
+        }
+
+        .loading-spinner-premium {
+          position: relative;
+          width: 80px;
+          height: 80px;
+          margin: 0 auto 1.5rem auto;
+        }
+
+        .spinner-ring {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          border: 3px solid transparent;
+          border-radius: 50%;
+          animation: spin-ring 1.5s linear infinite;
+        }
+
+        .spinner-ring:nth-child(1) {
+          border-top-color: #3b82f6;
+          animation-delay: 0s;
+        }
+
+        .spinner-ring:nth-child(2) {
+          border-right-color: #10b981;
+          animation-delay: 0.3s;
+        }
+
+        .spinner-ring:nth-child(3) {
+          border-bottom-color: #f59e0b;
+          animation-delay: 0.6s;
+        }
+
+        @keyframes spin-ring {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        .loading-title {
+          margin: 0 0 0.5rem 0;
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+        .loading-message {
+          margin: 0;
+          color: #64748b;
+          font-size: 0.875rem;
         }
 
         /* Empty State */
@@ -999,6 +1576,65 @@ export const IngredientsPage: React.FC = () => {
 
           .card-actions {
             justify-content: center;
+          }
+
+          /* Trendy Form Responsive */
+          .trendy-form-section {
+            padding: 1rem;
+          }
+
+          .form-hero {
+            padding: 2rem 1rem;
+          }
+
+          .hero-title {
+            font-size: 2rem;
+          }
+
+          .hero-cancel-btn {
+            position: static;
+            margin-top: 1rem;
+            align-self: center;
+          }
+
+          .form-stats {
+            grid-template-columns: 1fr;
+            padding: 1rem;
+          }
+
+          .stat-item {
+            padding: 0.75rem;
+          }
+
+          .enhanced-form-content {
+            padding: 1rem;
+          }
+
+          .form-card-header {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+            padding: 1rem;
+          }
+
+          .header-left {
+            flex-direction: column;
+            text-align: center;
+          }
+
+          .form-card-content {
+            padding: 1rem;
+          }
+
+          .progress-steps {
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+
+          .step-line {
+            width: 2px;
+            height: 30px;
+            background: linear-gradient(180deg, #3b82f6, #e2e8f0);
           }
         }
       `}</style>
