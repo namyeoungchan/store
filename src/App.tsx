@@ -4,6 +4,7 @@ import { initDatabase } from './database/database';
 import { insertDummyData } from './data/dummyData'; // 더미 데이터 - 나중에 삭제 예정
 import { AuthService } from './services/authService';
 import ProtectedRoute from './components/ProtectedRoute';
+import UserApp from './components/UserApp';
 import DashboardPage from './pages/DashboardPage';
 import { IngredientsPage } from './pages/IngredientsPage';
 import { MenusPage } from './pages/MenusPage';
@@ -13,8 +14,10 @@ import SalesPage from './pages/SalesPage';
 import SalesCalendarPage from "./pages/SalesCalendarPage";
 
 type PageType = 'dashboard' | 'ingredients' | 'menus' | 'inventory' | 'orders' | 'sales' | 'sales-calendar';
+type AppMode = 'select' | 'admin' | 'user';
 
 function App() {
+  const [appMode, setAppMode] = useState<AppMode>('select');
   const [currentPage, setCurrentPage] = useState<PageType>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<{ username: string; loginTime: number } | null>(null);
@@ -80,6 +83,70 @@ function App() {
     );
   }
 
+  // 앱 모드 선택 화면
+  if (appMode === 'select') {
+    return (
+      <div className="app-mode-select">
+        <div className="select-background">
+          <div className="select-container">
+            <div className="select-header">
+              <h1 className="select-title">시스템 선택</h1>
+              <p className="select-subtitle">접근할 시스템을 선택해주세요</p>
+            </div>
+
+            <div className="mode-options">
+              <button
+                className="mode-option admin"
+                onClick={() => setAppMode('admin')}
+              >
+                <div className="option-icon">👨‍💼</div>
+                <h3 className="option-title">관리자 시스템</h3>
+                <p className="option-description">
+                  매장 전체 운영 관리<br />
+                  재고, 메뉴, 매출 등 종합 관리
+                </p>
+                <div className="option-features">
+                  <span className="feature">📊 대시보드</span>
+                  <span className="feature">📦 재고관리</span>
+                  <span className="feature">🍽️ 메뉴관리</span>
+                  <span className="feature">💰 매출관리</span>
+                </div>
+              </button>
+
+              <button
+                className="mode-option user"
+                onClick={() => setAppMode('user')}
+              >
+                <div className="option-icon">👥</div>
+                <h3 className="option-title">직원 시스템</h3>
+                <p className="option-description">
+                  개인 근무시간 관리<br />
+                  출퇴근 및 근무 기록
+                </p>
+                <div className="option-features">
+                  <span className="feature">⏰ 근무시간 입력</span>
+                  <span className="feature">📊 근무 대시보드</span>
+                  <span className="feature">📅 근무 기록</span>
+                  <span className="feature">📈 근무 통계</span>
+                </div>
+              </button>
+            </div>
+
+            <div className="select-footer">
+              <p className="footer-text">각 시스템은 별도의 인증이 필요합니다</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 일반 사용자 앱
+  if (appMode === 'user') {
+    return <UserApp />;
+  }
+
+  // 관리자 앱 (기존 코드)
   return (
     <ProtectedRoute>
       <div className="App">
@@ -92,6 +159,13 @@ function App() {
                 <p className="brand-subtitle">Store Management</p>
               </div>
             </div>
+            <button
+              className="back-to-select-btn"
+              onClick={() => setAppMode('select')}
+              title="시스템 선택으로 돌아가기"
+            >
+              🔙
+            </button>
           </div>
           <div className="nav-menu">
             <div className="menu-section">
