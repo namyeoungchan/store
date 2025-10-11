@@ -8,16 +8,6 @@ interface DepositScheduleWidgetProps {
   onRefresh?: () => void;
 }
 
-// 결제 타입별 아이콘 매핑
-const getPaymentIcon = (type: PaymentType): string => {
-  const icons: Record<PaymentType, string> = {
-    'CARD': '💳',
-    'COUPANG': '📦',
-    'BAEMIN': '🛵',
-    'YOGIYO': '🍴'
-  };
-  return icons[type];
-};
 
 // 결제 타입별 색상 클래스
 const getPaymentColorClass = (type: PaymentType): string => {

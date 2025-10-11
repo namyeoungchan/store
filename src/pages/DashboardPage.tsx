@@ -75,11 +75,6 @@ const DashboardPage: React.FC = () => {
     });
   };
 
-  const calculateGrowthRate = (current: number, previous: number) => {
-    if (previous === 0) return current > 0 ? 100 : 0;
-    return ((current - previous) / previous) * 100;
-  };
-
   if (loading) {
     return (
       <div className="dashboard-loading">

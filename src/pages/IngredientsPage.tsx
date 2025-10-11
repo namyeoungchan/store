@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { IngredientForm } from '../components/IngredientForm';
-import { IngredientList } from '../components/IngredientList';
 import { IngredientService } from '../services/ingredientService';
 import { Ingredient } from '../types';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
-import { DepositScheduleWidget } from '../components/DepositScheduleWidget';
 
 export const IngredientsPage: React.FC = () => {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -100,9 +98,6 @@ export const IngredientsPage: React.FC = () => {
     }
   };
 
-  const startEdit = (ingredient: Ingredient) => {
-    setEditingIngredient(ingredient);
-  };
 
   const cancelEdit = () => {
     setEditingIngredient(null);

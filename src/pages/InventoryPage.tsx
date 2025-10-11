@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { InventoryForm } from '../components/InventoryForm';
-import { InventoryList } from '../components/InventoryList';
 import { InventoryHistory } from '../components/InventoryHistory';
 import { InventoryService } from '../services/inventoryService';
 import { IngredientService } from '../services/ingredientService';
 import { InventoryWithDetails, InventoryHistoryWithDetails, Ingredient } from '../types';
-import ConfirmDialog from '../components/ConfirmDialog';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
-import LowStockAlert from '../components/LowStockAlert';
 
 const InventoryPage: React.FC = () => {
   const [inventory, setInventory] = useState<InventoryWithDetails[]>([]);

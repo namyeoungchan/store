@@ -8,8 +8,9 @@ import { MenusPage } from './pages/MenusPage';
 import InventoryPage from './pages/InventoryPage';
 import OrdersPage from './pages/OrdersPage';
 import SalesPage from './pages/SalesPage';
+import SalesCalendarPage from "./pages/SalesCalendarPage";
 
-type PageType = 'dashboard' | 'ingredients' | 'menus' | 'inventory' | 'orders' | 'sales';
+type PageType = 'dashboard' | 'ingredients' | 'menus' | 'inventory' | 'orders' | 'sales' | 'sales-calendar';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('dashboard');
@@ -47,6 +48,8 @@ function App() {
         return <OrdersPage />;
       case 'sales':
         return <SalesPage />;
+      case 'sales-calendar':
+        return <SalesCalendarPage/>
       default:
         return <DashboardPage />;
     }
@@ -125,6 +128,12 @@ function App() {
             >
               <span className="nav-icon">💰</span>
               <span className="nav-text">매출 관리</span>
+            </button>
+            <button className={`nav-item ${currentPage === 'sales-calendar' ? 'active' : ''}`}
+                    onClick={() => setCurrentPage('sales-calendar')}
+            >
+              <span className="nav-icon">🗓️</span>
+              <span className="nav-text">매출 달력</span>
             </button>
           </div>
         </div>

@@ -173,29 +173,6 @@ const OrderSystem: React.FC<OrderSystemProps> = ({ onOrderComplete }) => {
     return cart.reduce((total, item) => total + (item.unit_price * item.quantity), 0);
   };
 
-  const checkInventoryAvailable = async (): Promise<boolean> => {
-    try {
-      // 각 메뉴에 필요한 재료 확인
-      for (const cartItem of cart) {
-        const recipes = MenuService.getRecipesByMenuId(cartItem.menu_id);
-
-        for (const recipe of recipes) {
-          const inventory = InventoryService.getInventoryByIngredientId(recipe.ingredient_id);
-          const requiredAmount = recipe.quantity * cartItem.quantity;
-
-          if (!inventory || inventory.current_stock < requiredAmount) {
-            const ingredientName = recipe.ingredient_name || '알 수 없는 재료';
-            setError(`재고가 부족합니다: ${ingredientName} (필요: ${requiredAmount}, 재고: ${inventory?.current_stock || 0})`);
-            return false;
-          }
-        }
-      }
-      return true;
-    } catch (err) {
-      setError('재고 확인 중 오류가 발생했습니다.');
-      return false;
-    }
-  };
 
   const processOrder = async () => {
     if (cart.length === 0) {

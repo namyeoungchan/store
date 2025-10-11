@@ -5,7 +5,6 @@ export class IngredientService {
   static getAllIngredients(): Ingredient[] {
     const db = getDatabase();
     const stmt = db.prepare('SELECT * FROM ingredients ORDER BY name');
-    const results = stmt.getAsObject({});
     const ingredients: Ingredient[] = [];
 
     while (stmt.step()) {

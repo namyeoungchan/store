@@ -1,5 +1,5 @@
 import { getDatabase } from '../database/database';
-import { Order, OrderItem, OrderItemWithDetails, RecipeWithDetails, PaymentType } from '../types';
+import { Order, OrderItem, OrderItemWithDetails, PaymentType } from '../types';
 import { RecipeService } from './recipeService';
 import { InventoryService } from './inventoryService';
 import { SalesService } from './salesService';
