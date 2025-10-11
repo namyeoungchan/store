@@ -3,7 +3,8 @@ import { InventoryForm } from '../components/InventoryForm';
 import { InventoryList } from '../components/InventoryList';
 import { InventoryHistory } from '../components/InventoryHistory';
 import { InventoryService } from '../services/inventoryService';
-import { InventoryWithDetails, InventoryHistoryWithDetails } from '../types';
+import { IngredientService } from '../services/ingredientService';
+import { InventoryWithDetails, InventoryHistoryWithDetails, Ingredient } from '../types';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
@@ -11,10 +12,14 @@ import LowStockAlert from '../components/LowStockAlert';
 
 const InventoryPage: React.FC = () => {
   const [inventory, setInventory] = useState<InventoryWithDetails[]>([]);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [selectedItem, setSelectedItem] = useState<InventoryWithDetails | null>(null);
   const [history, setHistory] = useState<InventoryHistoryWithDetails[]>([]);
-  const [activeTab, setActiveTab] = useState<'inventory' | 'history'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'ingredients' | 'register' | 'history'>('inventory');
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'low' | 'out'>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false,
     message: '',
@@ -23,6 +28,7 @@ const InventoryPage: React.FC = () => {
 
   useEffect(() => {
     loadInventory();
+    loadIngredients();
     loadHistory();
   }, []);
 
@@ -52,6 +58,16 @@ const InventoryPage: React.FC = () => {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadIngredients = async () => {
+    try {
+      const data = IngredientService.getAllIngredients();
+      setIngredients(data);
+    } catch (err) {
+      showToast('재료 정보를 불러오는데 실패했습니다.', 'error');
+      console.error(err);
     }
   };
 
@@ -98,118 +114,325 @@ const InventoryPage: React.FC = () => {
     setSelectedItem(item);
   };
 
+  // 필터링 로직
+  const filteredInventory = inventory.filter(item => {
+    const matchesSearch = item.ingredient_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter =
+      filterStatus === 'all' ||
+      (filterStatus === 'low' && item.current_stock <= item.min_stock) ||
+      (filterStatus === 'out' && item.current_stock === 0);
+    return matchesSearch && matchesFilter;
+  });
+
   const lowStockItems = inventory.filter(item => item.current_stock <= item.min_stock);
   const outOfStockItems = inventory.filter(item => item.current_stock === 0);
+
+  // 재고 상태별 통계
+  const getStockStatus = (item: InventoryWithDetails) => {
+    if (item.current_stock === 0) return 'out';
+    if (item.current_stock <= item.min_stock) return 'low';
+    return 'good';
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'out': return '#ef4444';
+      case 'low': return '#f59e0b';
+      default: return '#10b981';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'out': return '품절';
+      case 'low': return '부족';
+      default: return '충분';
+    }
+  };
 
   if (loading && inventory.length === 0) {
     return <LoadingSpinner size="large" message="재고 정보를 불러오는 중..." overlay />;
   }
 
   return (
-    <div className="inventory-page">
+    <div className="modern-inventory-page">
+      {/* Header with glassmorphism effect */}
       <div className="page-header">
         <div className="header-content">
-          <h1>📦 재고 관리</h1>
-          <p className="page-description">재료별 재고 현황을 실시간으로 모니터링하고 관리합니다</p>
+          <div className="header-title">
+            <div className="title-icon">🏢</div>
+            <div>
+              <h1>Smart Inventory</h1>
+              <p>지능형 재고 관리 시스템</p>
+            </div>
+          </div>
+          <div className="header-actions">
+            <button className="refresh-btn" onClick={() => { loadInventory(); loadIngredients(); }}>
+              <span>🔄</span>
+              새로고침
+            </button>
+          </div>
         </div>
-        <div className="header-stats">
-          <div className="stat-card stat-total">
-            <div className="stat-number">{inventory.length}</div>
-            <div className="stat-label">총 재료</div>
+
+        {/* Statistics Cards */}
+        <div className="stats-grid">
+          <div className="stat-card total">
+            <div className="stat-icon">📦</div>
+            <div className="stat-content">
+              <div className="stat-number">{inventory.length}</div>
+              <div className="stat-label">총 재고품목</div>
+            </div>
           </div>
-          <div className="stat-card stat-warning">
-            <div className="stat-number">{lowStockItems.length}</div>
-            <div className="stat-label">부족 재고</div>
+          <div className="stat-card low">
+            <div className="stat-icon">⚠️</div>
+            <div className="stat-content">
+              <div className="stat-number">{lowStockItems.length}</div>
+              <div className="stat-label">부족 재고</div>
+            </div>
           </div>
-          <div className="stat-card stat-danger">
-            <div className="stat-number">{outOfStockItems.length}</div>
-            <div className="stat-label">재고 없음</div>
+          <div className="stat-card out">
+            <div className="stat-icon">🚨</div>
+            <div className="stat-content">
+              <div className="stat-number">{outOfStockItems.length}</div>
+              <div className="stat-label">품절</div>
+            </div>
+          </div>
+          <div className="stat-card ingredients">
+            <div className="stat-icon">🥬</div>
+            <div className="stat-content">
+              <div className="stat-number">{ingredients.length}</div>
+              <div className="stat-label">등록 재료</div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 재고 부족 알림 */}
-      <LowStockAlert showAll={true} />
-
-      <div className="page-content">
-        <div className="tabs-container">
-          <div className="tabs">
+      {/* Navigation Tabs */}
+      <div className="nav-container">
+        <div className="nav-tabs">
+          {[
+            { id: 'inventory', label: '재고현황', icon: '📋', count: inventory.length },
+            { id: 'ingredients', label: '재료목록', icon: '🥬', count: ingredients.length },
+            { id: 'register', label: '재고등록', icon: '➕', count: null },
+            { id: 'history', label: '변동이력', icon: '📈', count: history.length }
+          ].map(tab => (
             <button
-              className={`tab ${activeTab === 'inventory' ? 'active' : ''}`}
-              onClick={() => setActiveTab('inventory')}
+              key={tab.id}
+              className={`nav-tab ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id as any)}
             >
-              📋 재고 현황 ({inventory.length})
+              <span className="tab-icon">{tab.icon}</span>
+              <span className="tab-label">{tab.label}</span>
+              {tab.count !== null && <span className="tab-count">{tab.count}</span>}
             </button>
-            <button
-              className={`tab ${activeTab === 'history' ? 'active' : ''}`}
-              onClick={() => setActiveTab('history')}
-            >
-              📈 변동 이력 ({history.length})
-            </button>
-          </div>
+          ))}
         </div>
+      </div>
 
+      {/* Content Area */}
+      <div className="content-area">
+        {/* 재고 현황 탭 */}
         {activeTab === 'inventory' && (
-          <div className="inventory-management">
-            <div className="content-grid">
-              <div className="list-section">
-                <div className="section-card">
-                  <div className="section-header">
-                    <h3>📋 재고 목록</h3>
-                    <div className="section-info">
-                      재료를 선택하여 재고를 관리하세요
-                    </div>
-                  </div>
-                  {loading && (
-                    <div className="loading-overlay">
-                      <LoadingSpinner size="small" />
-                    </div>
-                  )}
-                  <InventoryList
-                    inventory={inventory}
-                    onSelectItem={handleSelectItem}
-                    selectedItem={selectedItem}
+          <div className="inventory-section">
+            {/* Search and Filter Bar */}
+            <div className="toolbar">
+              <div className="search-section">
+                <div className="search-box">
+                  <span className="search-icon">🔍</span>
+                  <input
+                    type="text"
+                    placeholder="재료명으로 검색..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
+                <div className="filter-group">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value as any)}
+                    className="filter-select"
+                  >
+                    <option value="all">전체 상태</option>
+                    <option value="good">충분</option>
+                    <option value="low">부족</option>
+                    <option value="out">품절</option>
+                  </select>
+                </div>
               </div>
 
-              {selectedItem && (
-                <div className="form-section">
-                  <div className="section-card">
-                    <div className="section-header">
-                      <h3>⚙️ 재고 관리</h3>
-                      <div className="selected-item">
-                        {selectedItem.ingredient_name} ({selectedItem.ingredient_unit})
+              <div className="view-controls">
+                <button
+                  className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                  onClick={() => setViewMode('grid')}
+                >
+                  ⊞
+                </button>
+                <button
+                  className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
+                  onClick={() => setViewMode('list')}
+                >
+                  ☰
+                </button>
+              </div>
+            </div>
+
+            {/* Inventory Grid/List */}
+            <div className={`inventory-display ${viewMode}`}>
+              {filteredInventory.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">📭</div>
+                  <h3>검색 결과가 없습니다</h3>
+                  <p>다른 검색어나 필터를 시도해보세요</p>
+                </div>
+              ) : (
+                filteredInventory.map(item => {
+                  const status = getStockStatus(item);
+                  return (
+                    <div
+                      key={item.id}
+                      className={`inventory-card ${status} ${selectedItem?.id === item.id ? 'selected' : ''}`}
+                      onClick={() => handleSelectItem(item)}
+                    >
+                      <div className="card-header">
+                        <div className="ingredient-name">{item.ingredient_name}</div>
+                        <div className={`status-badge ${status}`}>
+                          {getStatusText(status)}
+                        </div>
+                      </div>
+
+                      <div className="stock-info">
+                        <div className="current-stock">
+                          <span className="stock-number">{item.current_stock}</span>
+                          <span className="stock-unit">{item.ingredient_unit}</span>
+                        </div>
+                        <div className="min-stock">
+                          최소: {item.min_stock}{item.ingredient_unit}
+                        </div>
+                      </div>
+
+                      <div className="stock-bar">
+                        <div
+                          className="stock-progress"
+                          style={{
+                            width: `${Math.min((item.current_stock / (item.min_stock * 2)) * 100, 100)}%`,
+                            backgroundColor: getStatusColor(status)
+                          }}
+                        />
+                      </div>
+
+                      <div className="card-footer">
+                        <span className="last-updated">
+                          {item.updated_at ? new Date(item.updated_at).toLocaleDateString('ko-KR') : '날짜 없음'}
+                        </span>
                       </div>
                     </div>
-                    <InventoryForm
-                      inventory={selectedItem}
-                      onUpdateStock={handleUpdateStock}
-                      onUpdateMinStock={handleUpdateMinStock}
-                    />
+                  );
+                })
+              )}
+            </div>
+
+            {/* Selected Item Management Panel */}
+            {selectedItem && (
+              <div className="management-panel">
+                <div className="panel-header">
+                  <h3>재고 관리</h3>
+                  <div className="selected-info">
+                    {selectedItem.ingredient_name} ({selectedItem.ingredient_unit})
                   </div>
                 </div>
-              )}
+                <InventoryForm
+                  inventory={selectedItem}
+                  onUpdateStock={handleUpdateStock}
+                  onUpdateMinStock={handleUpdateMinStock}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 재료 목록 탭 */}
+        {activeTab === 'ingredients' && (
+          <div className="ingredients-section">
+            <div className="section-header">
+              <h2>등록된 재료 목록</h2>
+              <p>시스템에 등록된 모든 재료를 확인할 수 있습니다</p>
+            </div>
+
+            <div className="ingredients-grid">
+              {ingredients.map(ingredient => {
+                const inventoryItem = inventory.find(inv => inv.ingredient_id === ingredient.id);
+                return (
+                  <div key={ingredient.id} className="ingredient-card">
+                    <div className="ingredient-header">
+                      <h4>{ingredient.name}</h4>
+                      <span className="unit-badge">{ingredient.unit}</span>
+                    </div>
+
+                    {inventoryItem ? (
+                      <div className="inventory-status">
+                        <div className="stock-display">
+                          <span className="current">{inventoryItem.current_stock}</span>
+                          <span className="separator">/</span>
+                          <span className="min">{inventoryItem.min_stock}</span>
+                          <span className="unit">{ingredient.unit}</span>
+                        </div>
+                        <div className={`status ${getStockStatus(inventoryItem)}`}>
+                          {getStatusText(getStockStatus(inventoryItem))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="no-inventory">
+                        <span>재고 정보 없음</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
+        {/* 재고 등록 탭 */}
+        {activeTab === 'register' && (
+          <div className="register-section">
+            <div className="register-card">
+              <div className="register-header">
+                <h2>새 재고 등록</h2>
+                <p>새로운 재료의 재고를 등록하거나 기존 재고를 수정합니다</p>
+              </div>
+
+              <div className="register-content">
+                {selectedItem ? (
+                  <InventoryForm
+                    inventory={selectedItem}
+                    onUpdateStock={handleUpdateStock}
+                    onUpdateMinStock={handleUpdateMinStock}
+                  />
+                ) : (
+                  <div className="select-prompt">
+                    <div className="prompt-icon">👆</div>
+                    <h3>재료를 선택해주세요</h3>
+                    <p>재고현황 탭에서 관리할 재료를 먼저 선택해주세요</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 변동 이력 탭 */}
         {activeTab === 'history' && (
           <div className="history-section">
-            <div className="section-card">
-              <div className="section-header">
-                <h3>📈 재고 변동 이력</h3>
-                <div className="section-info">
-                  최근 재고 변동 내역을 확인할 수 있습니다
-                </div>
-              </div>
-              <InventoryHistory history={history} limit={100} />
+            <div className="section-header">
+              <h2>재고 변동 이력</h2>
+              <p>모든 재고 변동 내역을 시간순으로 확인할 수 있습니다</p>
             </div>
+            <InventoryHistory history={history} limit={100} />
           </div>
         )}
       </div>
 
-      {/* Toast */}
+      {/* Toast Notification */}
       {toast.show && (
         <Toast
           message={toast.message}
@@ -219,65 +442,119 @@ const InventoryPage: React.FC = () => {
       )}
 
       <style>{`
-        .inventory-page {
+        .modern-inventory-page {
           min-height: 100vh;
-          background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-          padding: 2rem;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          overflow-x: hidden;
         }
 
+        /* Header */
         .page-header {
-          background: white;
-          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 24px;
+          margin: 1.5rem;
           padding: 2rem;
-          margin-bottom: 2rem;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          margin-bottom: 2rem;
         }
 
-        .header-content h1 {
-          margin: 0 0 0.5rem 0;
-          color: #2d3748;
-          font-size: 2rem;
-          font-weight: 700;
-        }
-
-        .page-description {
-          margin: 0;
-          color: #718096;
-          font-size: 1.1rem;
-        }
-
-        .header-stats {
+        .header-title {
           display: flex;
+          align-items: center;
           gap: 1rem;
-        }
-
-        .stat-card {
-          padding: 1.5rem;
-          border-radius: 12px;
-          text-align: center;
-          min-width: 120px;
           color: white;
         }
 
-        .stat-total {
-          background: linear-gradient(135deg, #2196f3, #1976d2);
+        .title-icon {
+          font-size: 3rem;
+          filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
         }
 
-        .stat-warning {
-          background: linear-gradient(135deg, #ff9800, #f57c00);
+        .header-title h1 {
+          margin: 0;
+          font-size: 2.5rem;
+          font-weight: 800;
+          background: linear-gradient(135deg, #fff, #e0e7ff);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .stat-danger {
-          background: linear-gradient(135deg, #f44336, #d32f2f);
+        .header-title p {
+          margin: 0.5rem 0 0 0;
+          font-size: 1.1rem;
+          opacity: 0.9;
+        }
+
+        .refresh-btn {
+          background: rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 16px;
+          color: white;
+          padding: 0.75rem 1.5rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          backdrop-filter: blur(10px);
+        }
+
+        .refresh-btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+
+        /* Statistics Grid */
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1.5rem;
+        }
+
+        .stat-card {
+          background: rgba(255, 255, 255, 0.15);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 20px;
+          padding: 1.5rem;
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          transition: all 0.3s ease;
+          cursor: pointer;
+        }
+
+        .stat-card:hover {
+          transform: translateY(-4px);
+          background: rgba(255, 255, 255, 0.25);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        }
+
+        .stat-icon {
+          font-size: 2.5rem;
+          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+
+        .stat-content {
+          color: white;
         }
 
         .stat-number {
           font-size: 2rem;
-          font-weight: bold;
+          font-weight: 700;
           margin-bottom: 0.25rem;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .stat-label {
@@ -285,152 +562,594 @@ const InventoryPage: React.FC = () => {
           opacity: 0.9;
         }
 
-        .tabs-container {
-          background: white;
-          border-radius: 16px;
-          padding: 1rem;
-          margin-bottom: 2rem;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        /* Navigation */
+        .nav-container {
+          margin: 0 1.5rem 1.5rem 1.5rem;
         }
 
-        .tabs {
+        .nav-tabs {
           display: flex;
           gap: 0.5rem;
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(20px);
+          border-radius: 20px;
+          padding: 0.5rem;
+          border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .tab {
-          background: #f8f9fa;
-          border: 2px solid #dee2e6;
-          border-radius: 12px;
-          padding: 1rem 2rem;
+        .nav-tab {
+          background: transparent;
+          border: none;
+          border-radius: 16px;
+          padding: 1rem 1.5rem;
+          color: rgba(255, 255, 255, 0.8);
           cursor: pointer;
-          font-size: 1rem;
-          font-weight: 500;
           transition: all 0.3s ease;
-          color: #6c757d;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-weight: 500;
+          position: relative;
+          overflow: hidden;
         }
 
-        .tab:hover {
-          background: #e9ecef;
+        .nav-tab:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+        }
+
+        .nav-tab.active {
+          background: rgba(255, 255, 255, 0.2);
+          color: white;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .tab-count {
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 12px;
+          padding: 0.25rem 0.5rem;
+          font-size: 0.75rem;
+          font-weight: 600;
+        }
+
+        /* Content Area */
+        .content-area {
+          margin: 0 1.5rem 1.5rem 1.5rem;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(20px);
+          border-radius: 24px;
+          min-height: 600px;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          overflow: hidden;
+        }
+
+        /* Toolbar */
+        .toolbar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 1.5rem;
+          background: rgba(248, 250, 252, 0.8);
+          border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+        }
+
+        .search-section {
+          display: flex;
+          gap: 1rem;
+          align-items: center;
+        }
+
+        .search-box {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+
+        .search-icon {
+          position: absolute;
+          left: 1rem;
+          font-size: 1.2rem;
+          color: #94a3b8;
+        }
+
+        .search-box input {
+          background: white;
+          border: 2px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 0.75rem 1rem 0.75rem 3rem;
+          font-size: 1rem;
+          width: 300px;
+          transition: all 0.3s ease;
+        }
+
+        .search-box input:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .filter-select {
+          background: white;
+          border: 2px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 0.75rem 1rem;
+          font-size: 0.9rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .filter-select:focus {
+          outline: none;
+          border-color: #3b82f6;
+        }
+
+        .view-controls {
+          display: flex;
+          gap: 0.5rem;
+          background: white;
+          border-radius: 12px;
+          padding: 0.25rem;
+          border: 2px solid #e2e8f0;
+        }
+
+        .view-btn {
+          background: transparent;
+          border: none;
+          border-radius: 8px;
+          padding: 0.5rem 0.75rem;
+          cursor: pointer;
+          font-size: 1.2rem;
+          transition: all 0.2s ease;
+        }
+
+        .view-btn.active {
+          background: #3b82f6;
+          color: white;
+          box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Inventory Display */
+        .inventory-display {
+          padding: 1.5rem;
+        }
+
+        .inventory-display.grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 1.5rem;
+        }
+
+        .inventory-display.list {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .inventory-card {
+          background: white;
+          border: 2px solid #e2e8f0;
+          border-radius: 20px;
+          padding: 1.5rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .inventory-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: #e2e8f0;
+          transition: all 0.3s ease;
+        }
+
+        .inventory-card.good::before { background: #10b981; }
+        .inventory-card.low::before { background: #f59e0b; }
+        .inventory-card.out::before { background: #ef4444; }
+
+        .inventory-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+          border-color: #3b82f6;
+        }
+
+        .inventory-card.selected {
+          border-color: #3b82f6;
+          box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
           transform: translateY(-2px);
         }
 
-        .tab.active {
-          background: linear-gradient(135deg, #2196f3, #1976d2);
-          border-color: #2196f3;
-          color: white;
-          box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        .card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 1rem;
         }
 
-        .content-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 2rem;
-          max-width: 1400px;
-          margin: 0 auto;
+        .ingredient-name {
+          font-size: 1.2rem;
+          font-weight: 700;
+          color: #1e293b;
         }
 
-        .section-card {
-          background: white;
-          border-radius: 16px;
-          padding: 2rem;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-          position: relative;
+        .status-badge {
+          padding: 0.25rem 0.75rem;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          text-transform: uppercase;
         }
 
-        .section-header {
+        .status-badge.good {
+          background: #dcfce7;
+          color: #15803d;
+        }
+
+        .status-badge.low {
+          background: #fef3c7;
+          color: #d97706;
+        }
+
+        .status-badge.out {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+
+        .stock-info {
+          margin-bottom: 1rem;
+        }
+
+        .current-stock {
+          display: flex;
+          align-items: baseline;
+          gap: 0.25rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .stock-number {
+          font-size: 2rem;
+          font-weight: 800;
+          color: #1e293b;
+        }
+
+        .stock-unit {
+          font-size: 1rem;
+          color: #64748b;
+          font-weight: 500;
+        }
+
+        .min-stock {
+          font-size: 0.875rem;
+          color: #64748b;
+        }
+
+        .stock-bar {
+          background: #f1f5f9;
+          border-radius: 8px;
+          height: 6px;
+          margin-bottom: 1rem;
+          overflow: hidden;
+        }
+
+        .stock-progress {
+          height: 100%;
+          border-radius: 8px;
+          transition: all 0.3s ease;
+        }
+
+        .card-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .last-updated {
+          font-size: 0.75rem;
+          color: #94a3b8;
+        }
+
+        /* Management Panel */
+        .management-panel {
+          margin-top: 2rem;
+          background: #f8fafc;
+          border-radius: 20px;
+          padding: 1.5rem;
+          border: 2px solid #e2e8f0;
+        }
+
+        .panel-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 1.5rem;
           padding-bottom: 1rem;
-          border-bottom: 2px solid #f7fafc;
+          border-bottom: 1px solid #e2e8f0;
         }
 
-        .section-header h3 {
+        .panel-header h3 {
           margin: 0;
-          color: #2d3748;
           font-size: 1.25rem;
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+        .selected-info {
+          background: #3b82f6;
+          color: white;
+          padding: 0.5rem 1rem;
+          border-radius: 12px;
+          font-size: 0.875rem;
           font-weight: 600;
         }
 
-        .section-info {
-          color: #718096;
-          font-size: 0.9rem;
+        /* Ingredients Section */
+        .ingredients-section,
+        .register-section,
+        .history-section {
+          padding: 2rem;
         }
 
-        .selected-item {
-          background: linear-gradient(135deg, #2196f3, #1976d2);
-          color: white;
-          padding: 0.5rem 1rem;
-          border-radius: 20px;
-          font-size: 0.9rem;
-          font-weight: 500;
+        .section-header {
+          margin-bottom: 2rem;
+          text-align: center;
         }
 
-        .loading-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(255, 255, 255, 0.8);
+        .section-header h2 {
+          margin: 0 0 0.5rem 0;
+          font-size: 2rem;
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+        .section-header p {
+          margin: 0;
+          color: #64748b;
+          font-size: 1.1rem;
+        }
+
+        .ingredients-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+          gap: 1.5rem;
+        }
+
+        .ingredient-card {
+          background: white;
+          border: 2px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 1.25rem;
+          transition: all 0.3s ease;
+        }
+
+        .ingredient-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+          border-color: #3b82f6;
+        }
+
+        .ingredient-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+
+        .ingredient-header h4 {
+          margin: 0;
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .unit-badge {
+          background: #f1f5f9;
+          color: #475569;
+          padding: 0.25rem 0.5rem;
+          border-radius: 8px;
+          font-size: 0.75rem;
+          font-weight: 600;
+        }
+
+        .inventory-status {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .stock-display {
           display: flex;
           align-items: center;
-          justify-content: center;
-          border-radius: 16px;
-          z-index: 10;
+          gap: 0.25rem;
         }
 
-        .history-section {
-          max-width: 1400px;
+        .stock-display .current {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+        .stock-display .separator {
+          color: #94a3b8;
+        }
+
+        .stock-display .min,
+        .stock-display .unit {
+          color: #64748b;
+          font-size: 0.875rem;
+        }
+
+        .status {
+          padding: 0.25rem 0.5rem;
+          border-radius: 8px;
+          font-size: 0.75rem;
+          font-weight: 600;
+        }
+
+        .status.good {
+          background: #dcfce7;
+          color: #15803d;
+        }
+
+        .status.low {
+          background: #fef3c7;
+          color: #d97706;
+        }
+
+        .status.out {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+
+        .no-inventory {
+          color: #94a3b8;
+          font-style: italic;
+          font-size: 0.875rem;
+        }
+
+        /* Register Section */
+        .register-card {
+          background: white;
+          border-radius: 20px;
+          padding: 2rem;
+          border: 2px solid #e2e8f0;
+          max-width: 600px;
           margin: 0 auto;
         }
 
+        .register-header {
+          text-align: center;
+          margin-bottom: 2rem;
+        }
+
+        .register-header h2 {
+          margin: 0 0 0.5rem 0;
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+        .register-header p {
+          margin: 0;
+          color: #64748b;
+        }
+
+        .select-prompt {
+          text-align: center;
+          padding: 3rem;
+          color: #64748b;
+        }
+
+        .prompt-icon {
+          font-size: 4rem;
+          margin-bottom: 1rem;
+        }
+
+        .select-prompt h3 {
+          margin: 0 0 0.5rem 0;
+          color: #475569;
+        }
+
+        /* Empty State */
+        .empty-state {
+          text-align: center;
+          padding: 4rem 2rem;
+          color: #64748b;
+        }
+
+        .empty-icon {
+          font-size: 4rem;
+          margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+          margin: 0 0 0.5rem 0;
+          color: #475569;
+        }
+
+        /* Responsive Design */
         @media (max-width: 1024px) {
-          .content-grid {
-            grid-template-columns: 1fr;
+          .modern-inventory-page {
+            padding: 0;
           }
 
-          .page-header {
+          .page-header,
+          .nav-container,
+          .content-area {
+            margin: 1rem;
+          }
+
+          .header-content {
             flex-direction: column;
             gap: 1rem;
             text-align: center;
           }
 
-          .header-stats {
-            justify-content: center;
+          .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+
+          .nav-tabs {
+            flex-wrap: wrap;
+          }
+
+          .toolbar {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: stretch;
+          }
+
+          .search-section {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .search-box input {
+            width: 100%;
           }
         }
 
         @media (max-width: 768px) {
-          .inventory-page {
-            padding: 1rem;
+          .page-header,
+          .nav-container,
+          .content-area {
+            margin: 0.5rem;
           }
 
-          .page-header {
-            padding: 1.5rem;
-          }
-
-          .section-card {
-            padding: 1.5rem;
-          }
-
-          .tabs {
+          .header-title {
             flex-direction: column;
-          }
-
-          .tab {
             text-align: center;
           }
 
-          .header-stats {
-            flex-direction: column;
-            align-items: center;
+          .title-icon {
+            font-size: 2rem;
           }
 
-          .stat-card {
-            width: 200px;
+          .header-title h1 {
+            font-size: 1.75rem;
+          }
+
+          .stats-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .nav-tabs {
+            flex-direction: column;
+          }
+
+          .nav-tab {
+            justify-content: center;
+          }
+
+          .inventory-display.grid {
+            grid-template-columns: 1fr;
+          }
+
+          .ingredients-grid {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
