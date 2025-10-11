@@ -90,6 +90,66 @@ export const initDatabase = async () => {
           FOREIGN KEY (ingredient_id) REFERENCES ingredients (id),
           FOREIGN KEY (order_id) REFERENCES orders (id)
       );
+
+      -- 사용자 테이블
+      CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT NOT NULL UNIQUE,
+          email TEXT NOT NULL UNIQUE,
+          full_name TEXT NOT NULL,
+          phone TEXT NOT NULL,
+          hire_date DATE NOT NULL,
+          position TEXT NOT NULL,
+          hourly_wage REAL NOT NULL DEFAULT 0,
+          password_hash TEXT,
+          password_temp TEXT,
+          is_password_temp BOOLEAN DEFAULT 1,
+          last_login DATETIME,
+          is_active BOOLEAN DEFAULT 1,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- 주간 근무 스케줄 테이블
+      CREATE TABLE IF NOT EXISTS work_schedules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          week_start_date DATE NOT NULL,
+          monday_start TIME,
+          monday_end TIME,
+          tuesday_start TIME,
+          tuesday_end TIME,
+          wednesday_start TIME,
+          wednesday_end TIME,
+          thursday_start TIME,
+          thursday_end TIME,
+          friday_start TIME,
+          friday_end TIME,
+          saturday_start TIME,
+          saturday_end TIME,
+          sunday_start TIME,
+          sunday_end TIME,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          UNIQUE(user_id, week_start_date)
+      );
+
+      -- 근무 기록 테이블
+      CREATE TABLE IF NOT EXISTS work_records (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          work_date DATE NOT NULL,
+          start_time TIME NOT NULL,
+          end_time TIME NOT NULL,
+          break_minutes INTEGER DEFAULT 0,
+          total_hours REAL NOT NULL,
+          total_pay REAL NOT NULL,
+          notes TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          UNIQUE(user_id, work_date)
+      );
     `;
 
     db?.exec(schema);

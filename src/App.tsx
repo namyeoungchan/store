@@ -12,8 +12,9 @@ import InventoryPage from './pages/InventoryPage';
 import OrdersPage from './pages/OrdersPage';
 import SalesPage from './pages/SalesPage';
 import SalesCalendarPage from "./pages/SalesCalendarPage";
+import UserManagementPage from './pages/UserManagementPage';
 
-type PageType = 'dashboard' | 'ingredients' | 'menus' | 'inventory' | 'orders' | 'sales' | 'sales-calendar';
+type PageType = 'dashboard' | 'ingredients' | 'menus' | 'inventory' | 'orders' | 'sales' | 'sales-calendar' | 'users';
 type AppMode = 'select' | 'admin' | 'user';
 
 function App() {
@@ -69,6 +70,8 @@ function App() {
         return <SalesPage />;
       case 'sales-calendar':
         return <SalesCalendarPage/>
+      case 'users':
+        return <UserManagementPage/>
       default:
         return <DashboardPage />;
     }
@@ -225,6 +228,17 @@ function App() {
               >
                 <span className="nav-icon">🗓️</span>
                 <span className="nav-text">매출 달력</span>
+              </button>
+            </div>
+
+            <div className="menu-section">
+              <div className="menu-label">인사 관리</div>
+              <button
+                className={`nav-item ${currentPage === 'users' ? 'active' : ''}`}
+                onClick={() => setCurrentPage('users')}
+              >
+                <span className="nav-icon">👥</span>
+                <span className="nav-text">직원 관리</span>
               </button>
             </div>
           </div>

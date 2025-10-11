@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { WorkTimeService, WorkTime, WorkSummary } from '../services/workTimeService';
 import { UserAuthService } from '../services/userAuthService';
+import PasswordChangeModal from './PasswordChangeModal';
 import '../styles/components/WorkDashboard.css';
 
 const WorkDashboard: React.FC = () => {
@@ -9,6 +10,7 @@ const WorkDashboard: React.FC = () => {
   const [weeklyData, setWeeklyData] = useState<Array<{ date: string; hours: number; dayName: string }>>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedWork, setSelectedWork] = useState<WorkTime | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const currentUser = UserAuthService.getCurrentUser();
 
@@ -85,7 +87,11 @@ const WorkDashboard: React.FC = () => {
               <p>{currentUser.name}님의 근무 현황</p>
             </div>
           </div>
-          <div className="refresh-button">
+          <div className="header-actions">
+            <button onClick={() => setShowPasswordModal(true)} className="password-btn">
+              <span>🔐</span>
+              비밀번호 변경
+            </button>
             <button onClick={loadDashboardData} className="refresh-btn">
               <span>🔄</span>
               새로고침
@@ -310,6 +316,16 @@ const WorkDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Password Change Modal */}
+      <PasswordChangeModal
+        isOpen={showPasswordModal}
+        userId={parseInt(currentUser?.id || '0')}
+        onClose={() => setShowPasswordModal(false)}
+        onSuccess={() => {
+          // 성공 시 필요하면 추가 작업
+        }}
+      />
     </div>
   );
 };

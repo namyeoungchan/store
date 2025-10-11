@@ -1,3 +1,5 @@
+import { UserService } from './userService';
+
 export interface User {
   id: string;
   name: string;
@@ -9,34 +11,42 @@ export class UserAuthService {
   private static readonly USER_SESSION_KEY = 'user_auth_session';
   private static readonly SESSION_DURATION = 8 * 60 * 60 * 1000; // 8시간
 
-  // 임시 사용자 데이터베이스 (실제 운영에서는 서버에서 관리)
-  private static readonly USERS: Array<User & { password: string }> = [
-    { id: '1', name: '김직원', email: 'employee1@store.com', password: '1234', role: 'employee' },
-    { id: '2', name: '이근무', email: 'employee2@store.com', password: '1234', role: 'employee' },
-    { id: '3', name: '박알바', email: 'employee3@store.com', password: '1234', role: 'employee' },
-    { id: '4', name: '최사원', email: 'employee4@store.com', password: '1234', role: 'employee' },
-  ];
-
   /**
    * 일반 사용자 로그인
    */
-  static login(email: string, password: string): { success: boolean; user?: User; error?: string } {
-    const user = this.USERS.find(u => u.email === email && u.password === password);
+  static async login(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
+    try {
+      const dbUser = await UserService.authenticateUser(email, password);
 
-    if (!user) {
-      return { success: false, error: '이메일 또는 비밀번호가 올바르지 않습니다.' };
+      if (!dbUser) {
+        return { success: false, error: '이메일 또는 비밀번호가 올바르지 않습니다.' };
+      }
+
+      if (!dbUser.is_active) {
+        return { success: false, error: '비활성화된 계정입니다. 관리자에게 문의하세요.' };
+      }
+
+      const user: User = {
+        id: dbUser.id!.toString(),
+        name: dbUser.full_name,
+        email: dbUser.email,
+        role: 'employee'
+      };
+
+      const token = this.generateToken(user.id);
+      const sessionData = {
+        token,
+        user,
+        loginTime: Date.now(),
+        expiryTime: Date.now() + this.SESSION_DURATION
+      };
+
+      localStorage.setItem(this.USER_SESSION_KEY, JSON.stringify(sessionData));
+      return { success: true, user };
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, error: '로그인 중 오류가 발생했습니다.' };
     }
-
-    const token = this.generateToken(user.id);
-    const sessionData = {
-      token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
-      loginTime: Date.now(),
-      expiryTime: Date.now() + this.SESSION_DURATION
-    };
-
-    localStorage.setItem(this.USER_SESSION_KEY, JSON.stringify(sessionData));
-    return { success: true, user: sessionData.user };
   }
 
   /**
@@ -97,10 +107,22 @@ export class UserAuthService {
   }
 
   /**
-   * 모든 사용자 목록 반환 (관리자용)
+   * 로그인 가능한 사용자 목록 조회 (개발/테스트용)
    */
-  static getAllUsers(): User[] {
-    return this.USERS.map(({ password, ...user }) => user);
+  static async getLoginEnabledUsers(): Promise<Array<{ email: string; name: string; hasTemp: boolean }>> {
+    try {
+      const allUsers = await UserService.getAllUsers();
+      return allUsers
+        .filter(user => user.password_hash && user.is_active)
+        .map(user => ({
+          email: user.email,
+          name: user.full_name,
+          hasTemp: !!user.is_password_temp
+        }));
+    } catch (error) {
+      console.error('Error getting login enabled users:', error);
+      return [];
+    }
   }
 
   /**
