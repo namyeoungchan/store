@@ -25,7 +25,7 @@
     "vm-browserify": "^1.1.2",
     "web-vitals": "^2.1.4"
   },
-  "homepage": "https://namyeongchan.github.io/store",
+  "homepage": "https://namyeongchan.github.io/store-inventory-system",
   "scripts": {
     "start": "craco start",
     "build": "craco build",
