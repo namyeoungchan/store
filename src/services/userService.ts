@@ -1,4 +1,4 @@
-import { getDatabase } from '../database/database';
+import { getDatabase, persistDatabase } from '../database/database';
 import { User, UserWithSchedule } from '../types';
 import { PasswordUtils } from '../utils/passwordUtils';
 
@@ -99,6 +99,9 @@ export class UserService {
     const result = db.exec('SELECT last_insert_rowid()');
     const userId = result[0].values[0][0] as number;
 
+    // 데이터베이스 변경사항 저장
+    persistDatabase();
+
     return this.getUserById(userId) as Promise<User>;
   }
 
@@ -126,6 +129,9 @@ export class UserService {
 
     stmt.run([...values, id]);
 
+    // 데이터베이스 변경사항 저장
+    persistDatabase();
+
     return this.getUserById(id);
   }
 
@@ -134,6 +140,9 @@ export class UserService {
 
     const stmt = db.prepare('DELETE FROM users WHERE id = ?');
     stmt.run([id]);
+
+    // 데이터베이스 변경사항 저장
+    persistDatabase();
 
     return true;
   }
@@ -287,6 +296,9 @@ export class UserService {
       UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?
     `);
     stmt.run([userId]);
+
+    // 데이터베이스 변경사항 저장
+    persistDatabase();
   }
 
   static async resetPassword(userId: number): Promise<string> {
@@ -304,6 +316,10 @@ export class UserService {
     `);
 
     stmt.run([passwordHash, tempPassword, userId]);
+
+    // 데이터베이스 변경사항 저장
+    persistDatabase();
+
     return tempPassword;
   }
 
@@ -326,6 +342,10 @@ export class UserService {
     `);
 
     stmt.run([passwordHash, userId]);
+
+    // 데이터베이스 변경사항 저장
+    persistDatabase();
+
     return true;
   }
 
@@ -360,5 +380,8 @@ export class UserService {
 
       stmt.run([userId]);
     }
+
+    // 데이터베이스 변경사항 저장
+    persistDatabase();
   }
 }

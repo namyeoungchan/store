@@ -3,6 +3,35 @@ import initSqlJs, { Database } from 'sql.js';
 let db: Database | null = null;
 let SQL: any = null;
 
+const DB_KEY = 'store_inventory_db';
+
+// 데이터베이스를 localStorage에 저장
+const saveDatabase = () => {
+  if (db) {
+    const data = db.export();
+    const base64String = btoa(String.fromCharCode(...Array.from(data)));
+    localStorage.setItem(DB_KEY, base64String);
+  }
+};
+
+// localStorage에서 데이터베이스 로드
+const loadDatabase = (): Uint8Array | null => {
+  try {
+    const base64String = localStorage.getItem(DB_KEY);
+    if (base64String) {
+      const binaryString = atob(base64String);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes;
+    }
+  } catch (error) {
+    console.warn('Failed to load database from localStorage:', error);
+  }
+  return null;
+};
+
 export const initDatabase = async () => {
   if (!SQL) {
     SQL = await initSqlJs({
@@ -11,7 +40,20 @@ export const initDatabase = async () => {
   }
 
   if (!db) {
-    db = new SQL.Database();
+    // localStorage에서 기존 데이터베이스 로드 시도
+    const savedData = loadDatabase();
+
+    if (savedData) {
+      try {
+        db = new SQL.Database(savedData);
+        console.log('Database loaded from localStorage');
+      } catch (error) {
+        console.warn('Failed to load saved database, creating new one:', error);
+        db = new SQL.Database();
+      }
+    } else {
+      db = new SQL.Database();
+    }
 
     // 스키마 생성
     const schema = `
@@ -153,6 +195,11 @@ export const initDatabase = async () => {
     `;
 
     db?.exec(schema);
+
+    // 초기 데이터베이스 저장
+    if (!savedData) {
+      saveDatabase();
+    }
   }
 
   return db;
@@ -163,4 +210,15 @@ export const getDatabase = () => {
     throw new Error('Database not initialized. Call initDatabase() first.');
   }
   return db;
+};
+
+// 모든 데이터베이스 변경 후 호출해야 하는 함수
+export const persistDatabase = () => {
+  saveDatabase();
+};
+
+// 데이터베이스 초기화 (개발/테스트용)
+export const resetDatabase = () => {
+  localStorage.removeItem(DB_KEY);
+  db = null;
 };

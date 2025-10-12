@@ -1,4 +1,4 @@
-import { getDatabase } from '../database/database';
+import { getDatabase, persistDatabase } from '../database/database';
 import { WorkSchedule } from '../types';
 
 export class ScheduleService {
@@ -69,6 +69,9 @@ export class ScheduleService {
         schedule.user_id, schedule.week_start_date
       ]);
 
+      // 데이터베이스 변경사항 저장
+      persistDatabase();
+
       return this.getScheduleByUserAndWeek(schedule.user_id, schedule.week_start_date) as Promise<WorkSchedule>;
     } else {
       const stmt = db.prepare(`
@@ -94,6 +97,9 @@ export class ScheduleService {
         schedule.saturday_start || null, schedule.saturday_end || null,
         schedule.sunday_start || null, schedule.sunday_end || null
       ]);
+
+      // 데이터베이스 변경사항 저장
+      persistDatabase();
 
       return this.getScheduleByUserAndWeek(schedule.user_id, schedule.week_start_date) as Promise<WorkSchedule>;
     }
@@ -139,6 +145,10 @@ export class ScheduleService {
     const db = this.getDb();
     const stmt = db.prepare('DELETE FROM work_schedules WHERE user_id = ? AND week_start_date = ?');
     stmt.run([userId, weekStartDate]);
+
+    // 데이터베이스 변경사항 저장
+    persistDatabase();
+
     return true;
   }
 

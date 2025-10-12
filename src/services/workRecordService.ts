@@ -1,4 +1,4 @@
-import { getDatabase } from '../database/database';
+import { getDatabase, persistDatabase } from '../database/database';
 import { WorkRecord, WeeklyWorkSummary } from '../types';
 
 export class WorkRecordService {
@@ -27,6 +27,9 @@ export class WorkRecordService {
 
     const result = db.exec('SELECT last_insert_rowid()');
     const recordId = result[0].values[0][0] as number;
+
+    // 데이터베이스 변경사항 저장
+    persistDatabase();
 
     return this.getWorkRecordById(recordId) as Promise<WorkRecord>;
   }
@@ -106,6 +109,9 @@ export class WorkRecordService {
 
     stmt.run([...values, id]);
 
+    // 데이터베이스 변경사항 저장
+    persistDatabase();
+
     return this.getWorkRecordById(id);
   }
 
@@ -113,6 +119,10 @@ export class WorkRecordService {
     const db = this.getDb();
     const stmt = db.prepare('DELETE FROM work_records WHERE id = ?');
     stmt.run([id]);
+
+    // 데이터베이스 변경사항 저장
+    persistDatabase();
+
     return true;
   }
 
