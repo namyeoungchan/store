@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/nam-yeongchan/Desktop/무제 폴더/workspaces/gituk/store-inventory-system/src/**)",
+      "Read(//Users/nam-yeongchan/Desktop/무제/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
