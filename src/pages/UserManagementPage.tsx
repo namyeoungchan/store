@@ -6,6 +6,7 @@ import UserForm from '../components/UserManagement/UserForm';
 import ScheduleManagement from '../components/UserManagement/ScheduleManagement';
 import WorkTimeAnalysis from '../components/UserManagement/WorkTimeAnalysis';
 import ConfirmDialog from '../components/ConfirmDialog';
+import '../styles/components/ModernEmployeeManagement.css';
 
 type TabType = 'users' | 'schedule' | 'analysis';
 
@@ -128,67 +129,103 @@ const UserManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="user-management-page">
-      <div className="page-header">
-        <h1 className="page-title">👥 직원 관리</h1>
-        <p className="page-subtitle">직원 정보, 스케줄 및 근무시간을 관리합니다</p>
+    <div className="user-management-modern">
+      {/* Background Effects */}
+      <div className="background-effects">
+        <div className="gradient-orb orb-1"></div>
+        <div className="gradient-orb orb-2"></div>
+        <div className="gradient-orb orb-3"></div>
       </div>
 
+      {/* Header Section */}
+      <div className="modern-header">
+        <div className="header-content">
+          <div className="header-text">
+            <h1 className="modern-title">
+              <span className="title-icon">👥</span>
+              직원 관리
+            </h1>
+            <p className="modern-subtitle">
+              팀원들의 정보와 스케줄을 스마트하게 관리하세요
+            </p>
+          </div>
+          <div className="header-stats">
+            <div className="stat-card">
+              <div className="stat-number">{users.length}</div>
+              <div className="stat-label">총 직원</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-number">{users.filter(u => u.is_active).length}</div>
+              <div className="stat-label">활성 직원</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Error Toast */}
       {error && (
-        <div className="error-message">
-          <span className="error-icon">⚠️</span>
-          {error}
-          <button onClick={() => setError(null)} className="error-close">×</button>
+        <div className="error-toast">
+          <div className="error-content">
+            <span className="error-icon">⚠️</span>
+            <span className="error-text">{error}</span>
+            <button onClick={() => setError(null)} className="error-close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="tab-navigation">
-        <button
-          className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
-          onClick={() => setActiveTab('users')}
-        >
-          <span className="tab-icon">👤</span>
-          직원 관리
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'schedule' ? 'active' : ''}`}
-          onClick={() => setActiveTab('schedule')}
-        >
-          <span className="tab-icon">📅</span>
-          스케줄 관리
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
-          onClick={() => setActiveTab('analysis')}
-        >
-          <span className="tab-icon">📊</span>
-          근무시간 분석
-        </button>
+      {/* Modern Tab Navigation */}
+      <div className="modern-tabs">
+        <div className="tab-container">
+          {[
+            { key: 'users', icon: '👤', label: '직원 관리', color: 'blue' },
+            { key: 'schedule', icon: '📅', label: '스케줄 관리', color: 'purple' },
+            { key: 'analysis', icon: '📊', label: '근무 분석', color: 'green' }
+          ].map(tab => (
+            <button
+              key={tab.key}
+              className={`modern-tab ${activeTab === tab.key ? 'active' : ''} ${tab.color}`}
+              onClick={() => setActiveTab(tab.key as TabType)}
+            >
+              <span className="tab-icon">{tab.icon}</span>
+              <span className="tab-label">{tab.label}</span>
+              {activeTab === tab.key && <div className="tab-indicator"></div>}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="tab-content">
-        {activeTab === 'users' && (
-          <UserList
-            users={users}
-            onCreateUser={handleCreateUser}
-            onEditUser={handleEditUser}
-            onDeleteUser={handleDeleteUser}
-            onResetPassword={handleResetPassword}
-          />
-        )}
+      {/* Content Area */}
+      <div className="modern-content">
+        <div className="content-wrapper">
+          {activeTab === 'users' && (
+            <UserList
+              users={users}
+              onCreateUser={handleCreateUser}
+              onEditUser={handleEditUser}
+              onDeleteUser={handleDeleteUser}
+              onResetPassword={handleResetPassword}
+            />
+          )}
 
-        {activeTab === 'schedule' && (
-          <ScheduleManagement
-            users={usersWithSchedule}
-            onScheduleUpdate={loadUsers}
-          />
-        )}
+          {activeTab === 'schedule' && (
+            <ScheduleManagement
+              users={usersWithSchedule}
+              onScheduleUpdate={loadUsers}
+            />
+          )}
 
-        {activeTab === 'analysis' && (
-          <WorkTimeAnalysis />
-        )}
+          {activeTab === 'analysis' && (
+            <WorkTimeAnalysis />
+          )}
+        </div>
       </div>
 
+      {/* Modern User Form Modal */}
       {showUserForm && (
         <UserForm
           user={selectedUser}
@@ -200,6 +237,7 @@ const UserManagementPage: React.FC = () => {
         />
       )}
 
+      {/* Confirm Dialog */}
       <ConfirmDialog
         isOpen={showConfirmDialog}
         title="직원 삭제 확인"

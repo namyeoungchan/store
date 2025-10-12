@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Read(//Users/nam-yeongchan/Desktop/무제 폴더/workspaces/gituk/store-inventory-system/src/**)",
-      "Read(//Users/nam-yeongchan/Desktop/무제/**)"
+      "Read(//Users/nam-yeongchan/Desktop/무제/**)",
+      "Read(//Users/nam-yeongchan/Desktop/무제 폴더/workspaces/gituk/store-inventory-system/**)",
+      "Bash(cd:*)",
+      "Bash(npm start)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
