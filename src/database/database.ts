@@ -10,7 +10,7 @@ export const getDatabase = () => {
 export const initDatabase = async () => {
   try {
     // Supabase 연결 테스트
-    const { data, error } = await db.from('users').select('id').limit(1);
+    const { error } = await db.from('users').select('id').limit(1);
 
     if (error) {
       console.warn('Supabase connection test warning:', error);

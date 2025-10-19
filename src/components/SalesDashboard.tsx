@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SalesAnalytics, DepositSchedule } from '../types';
 import { SalesService } from '../services/salesService';
 import Toast from './Toast';
@@ -13,10 +13,6 @@ const SalesDashboard: React.FC = () => {
     type: 'success'
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
   };
@@ -25,7 +21,7 @@ const SalesDashboard: React.FC = () => {
     setToast({ show: false, message: '', type: 'success' });
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const analyticsData = await SalesService.getSalesAnalytics();
@@ -38,7 +34,11 @@ const SalesDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleMarkAsDeposited = async (orderId: string) => {
     try {

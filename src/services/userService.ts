@@ -1,5 +1,5 @@
 import { supabase } from '../firebase/config';
-import { User, UserWithSchedule, SalaryType } from '../types';
+import { User, UserWithSchedule } from '../types';
 import { PasswordUtils } from '../utils/passwordUtils';
 
 export class UserService {

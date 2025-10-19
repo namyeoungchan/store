@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Menu, OrderItem, Order, RecipeWithDetails, PaymentType } from '../types';
 import { MenuService } from '../services/menuService';
 import { OrderService } from '../services/orderService';
@@ -24,15 +24,7 @@ const OrderSystem: React.FC<OrderSystemProps> = ({ onOrderComplete }) => {
   const [menuAvailability, setMenuAvailability] = useState<{ [menuId: string]: { available: boolean; reason?: string } }>({});
   const [selectedPaymentType, setSelectedPaymentType] = useState<PaymentType>('CARD');
 
-  useEffect(() => {
-    loadMenus();
-  }, []);
-
-  useEffect(() => {
-    checkMenuAvailability();
-  }, [menus, cart]);
-
-  const loadMenus = async () => {
+  const loadMenus = useCallback(async () => {
     try {
       const menuData = await MenuService.getAllMenus();
       setMenus(menuData);
@@ -48,9 +40,9 @@ const OrderSystem: React.FC<OrderSystemProps> = ({ onOrderComplete }) => {
     } catch (err) {
       setError('메뉴를 불러오는데 실패했습니다.');
     }
-  };
+  }, []);
 
-  const checkMenuAvailability = async () => {
+  const checkMenuAvailability = useCallback(async () => {
     const availability: { [menuId: string]: { available: boolean; reason?: string } } = {};
 
     for (const menu of menus) {
@@ -109,7 +101,15 @@ const OrderSystem: React.FC<OrderSystemProps> = ({ onOrderComplete }) => {
     }
 
     setMenuAvailability(availability);
-  };
+  }, [menus, menuRecipes, cart]);
+
+  useEffect(() => {
+    loadMenus();
+  }, []);
+
+  useEffect(() => {
+    checkMenuAvailability();
+  }, [menus, cart, menuRecipes]);
 
   const addToCart = (menu: Menu) => {
     if (!menu.id) return;
