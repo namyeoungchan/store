@@ -1,14 +1,18 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,8 +36,11 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./build
+          path: ./build   # Vite 빌드 결과물
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Show Deployment URL
+        run: echo "✅ Deployed at ${{ steps.deployment.outputs.page_url }}"
