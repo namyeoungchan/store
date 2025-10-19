@@ -1,16 +1,8 @@
-name: Deploy to GitHub Pages
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # ✅ 여기를 read → write 로 변경
+      contents: write
       pages: write
       id-token: write
 
@@ -34,8 +26,11 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASEKEY }}
           CI: false
 
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./build   # Vite 기본 빌드 결과물 경로
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        if: github.ref == 'refs/heads/main'
