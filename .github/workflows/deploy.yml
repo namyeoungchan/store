@@ -29,8 +29,8 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.SUPABASEPROJECT }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASEKEY }}
+          REACT_APP_SUPABASE_URL: ${{ secrets.SUPABASEPROJECT }}
+          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.SUPABASEKEY }}
           CI: false
 
       - name: Upload artifact
