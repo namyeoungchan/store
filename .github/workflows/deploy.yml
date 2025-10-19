@@ -29,7 +29,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./build   # Vite 기본 빌드 결과물 경로
+          path: ./build
 
       - name: Deploy to GitHub Pages
         id: deployment
