@@ -28,6 +28,7 @@ jobs:
       env:
         VITE_SUPABASE_URL: ${{ secrets.SUPABASEPROJECT }}
         VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASEKEY }}
+        CI: false
 
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
