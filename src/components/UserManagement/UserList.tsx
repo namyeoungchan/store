@@ -20,8 +20,12 @@ const UserList: React.FC<UserListProps> = ({
     return new Date(dateString).toLocaleDateString('ko-KR');
   };
 
-  const formatWage = (wage: number) => {
-    return `${wage.toLocaleString()}원`;
+  const formatSalary = (user: User) => {
+    if (user.salary_type === 'MONTHLY') {
+      return `월 ${user.monthly_salary?.toLocaleString() || 0}원`;
+    } else {
+      return `시급 ${user.hourly_wage?.toLocaleString() || 0}원`;
+    }
   };
 
   return (
@@ -155,8 +159,8 @@ const UserList: React.FC<UserListProps> = ({
                       </svg>
                     </div>
                     <div className="info-text">
-                      <span className="info-label">시급</span>
-                      <span className="info-value wage">{formatWage(user.hourly_wage)}</span>
+                      <span className="info-label">급여</span>
+                      <span className="info-value wage">{formatSalary(user)}</span>
                     </div>
                   </div>
                 </div>

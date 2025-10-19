@@ -1,154 +1,193 @@
-import { getDatabase } from '../database/database';
+import { supabase } from '../firebase/config';
 import { Recipe, RecipeWithDetails } from '../types';
 
 export class RecipeService {
-  static getRecipesByMenuId(menuId: number): RecipeWithDetails[] {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      SELECT
-        r.*,
-        i.name as ingredient_name,
-        i.unit as ingredient_unit,
-        m.name as menu_name
-      FROM recipes r
-      JOIN ingredients i ON r.ingredient_id = i.id
-      JOIN menus m ON r.menu_id = m.id
-      WHERE r.menu_id = ?
-      ORDER BY i.name
-    `);
+  private static tableName = 'recipes';
 
-    const recipes: RecipeWithDetails[] = [];
-    stmt.bind([menuId]);
-
-    while (stmt.step()) {
-      const row = stmt.getAsObject();
-      recipes.push({
-        id: row.id as number,
-        menu_id: row.menu_id as number,
-        ingredient_id: row.ingredient_id as number,
-        quantity: row.quantity as number,
-        ingredient_name: row.ingredient_name as string,
-        ingredient_unit: row.ingredient_unit as string,
-        menu_name: row.menu_name as string
-      });
-    }
-
-    stmt.free();
-    return recipes;
-  }
-
-  static getAllRecipesWithDetails(): RecipeWithDetails[] {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      SELECT
-        r.*,
-        i.name as ingredient_name,
-        i.unit as ingredient_unit,
-        m.name as menu_name
-      FROM recipes r
-      JOIN ingredients i ON r.ingredient_id = i.id
-      JOIN menus m ON r.menu_id = m.id
-      ORDER BY m.name, i.name
-    `);
-
-    const recipes: RecipeWithDetails[] = [];
-
-    while (stmt.step()) {
-      const row = stmt.getAsObject();
-      recipes.push({
-        id: row.id as number,
-        menu_id: row.menu_id as number,
-        ingredient_id: row.ingredient_id as number,
-        quantity: row.quantity as number,
-        ingredient_name: row.ingredient_name as string,
-        ingredient_unit: row.ingredient_unit as string,
-        menu_name: row.menu_name as string
-      });
-    }
-
-    stmt.free();
-    return recipes;
-  }
-
-  static addRecipe(recipe: Omit<Recipe, 'id'>): number {
-    const db = getDatabase();
-
+  static async getRecipesByMenuId(menuId: string): Promise<RecipeWithDetails[]> {
     try {
-      const stmt = db.prepare(
-        'INSERT INTO recipes (menu_id, ingredient_id, quantity) VALUES (?, ?, ?)'
-      );
-      stmt.run([recipe.menu_id, recipe.ingredient_id, recipe.quantity]);
-      stmt.free();
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select(`
+          *,
+          ingredients!inner(
+            name,
+            unit
+          ),
+          menus!inner(
+            name
+          )
+        `)
+        .eq('menu_id', menuId);
 
-      const lastIdStmt = db.prepare('SELECT last_insert_rowid() as id');
-      lastIdStmt.step();
-      const result = lastIdStmt.getAsObject();
-      lastIdStmt.free();
+      if (error) throw error;
 
-      return result.id as number;
+      const recipesWithDetails = (data || []).map((recipe: any) => ({
+        id: recipe.id,
+        menu_id: recipe.menu_id,
+        ingredient_id: recipe.ingredient_id,
+        quantity: recipe.quantity,
+        ingredient_name: recipe.ingredients.name,
+        ingredient_unit: recipe.ingredients.unit,
+        menu_name: recipe.menus.name
+      }));
+
+      return recipesWithDetails.sort((a, b) => a.ingredient_name.localeCompare(b.ingredient_name));
     } catch (error) {
-      if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+      console.error('Error getting recipes by menu ID:', error);
+      return [];
+    }
+  }
+
+  static async getAllRecipesWithDetails(): Promise<RecipeWithDetails[]> {
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select(`
+          *,
+          ingredients!inner(
+            name,
+            unit
+          ),
+          menus!inner(
+            name
+          )
+        `);
+
+      if (error) throw error;
+
+      const recipesWithDetails = (data || []).map((recipe: any) => ({
+        id: recipe.id,
+        menu_id: recipe.menu_id,
+        ingredient_id: recipe.ingredient_id,
+        quantity: recipe.quantity,
+        ingredient_name: recipe.ingredients.name,
+        ingredient_unit: recipe.ingredients.unit,
+        menu_name: recipe.menus.name
+      }));
+
+      return recipesWithDetails.sort((a, b) => {
+        const menuCompare = a.menu_name.localeCompare(b.menu_name);
+        return menuCompare !== 0 ? menuCompare : a.ingredient_name.localeCompare(b.ingredient_name);
+      });
+    } catch (error) {
+      console.error('Error getting all recipes with details:', error);
+      return [];
+    }
+  }
+
+  static async addRecipe(recipe: Omit<Recipe, 'id'>): Promise<string> {
+    try {
+      // 중복 체크 (동일 메뉴에 동일 재료가 이미 있는지)
+      const { data: existingRecipes } = await supabase
+        .from(this.tableName)
+        .select('id')
+        .eq('menu_id', recipe.menu_id)
+        .eq('ingredient_id', recipe.ingredient_id);
+
+      if (existingRecipes && existingRecipes.length > 0) {
         throw new Error('이미 해당 메뉴에 등록된 재료입니다.');
       }
+
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .insert(recipe)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data.id;
+    } catch (error) {
+      console.error('Error adding recipe:', error);
       throw error;
     }
   }
 
-  static updateRecipe(id: number, recipe: Omit<Recipe, 'id'>): void {
-    const db = getDatabase();
-
+  static async updateRecipe(id: string, recipe: Omit<Recipe, 'id'>): Promise<void> {
     try {
-      const stmt = db.prepare(
-        'UPDATE recipes SET menu_id = ?, ingredient_id = ?, quantity = ? WHERE id = ?'
-      );
-      stmt.run([recipe.menu_id, recipe.ingredient_id, recipe.quantity, id]);
-      stmt.free();
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+      // 중복 체크 (자신 제외하고 동일 메뉴에 동일 재료가 있는지)
+      const { data: existingRecipes } = await supabase
+        .from(this.tableName)
+        .select('id')
+        .eq('menu_id', recipe.menu_id)
+        .eq('ingredient_id', recipe.ingredient_id)
+        .neq('id', id);
+
+      if (existingRecipes && existingRecipes.length > 0) {
         throw new Error('이미 해당 메뉴에 등록된 재료입니다.');
       }
+
+      const { error } = await supabase
+        .from(this.tableName)
+        .update(recipe)
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating recipe:', error);
       throw error;
     }
   }
 
-  static deleteRecipe(id: number): void {
-    const db = getDatabase();
-    const stmt = db.prepare('DELETE FROM recipes WHERE id = ?');
-    stmt.run([id]);
-    stmt.free();
-  }
+  static async deleteRecipe(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from(this.tableName)
+        .delete()
+        .eq('id', id);
 
-  static deleteRecipesByMenuId(menuId: number): void {
-    const db = getDatabase();
-    const stmt = db.prepare('DELETE FROM recipes WHERE menu_id = ?');
-    stmt.run([menuId]);
-    stmt.free();
-  }
-
-  static getRecipeById(id: number): Recipe | null {
-    const db = getDatabase();
-    const stmt = db.prepare('SELECT * FROM recipes WHERE id = ?');
-    stmt.bind([id]);
-
-    if (stmt.step()) {
-      const row = stmt.getAsObject();
-      stmt.free();
-      return {
-        id: row.id as number,
-        menu_id: row.menu_id as number,
-        ingredient_id: row.ingredient_id as number,
-        quantity: row.quantity as number
-      };
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting recipe:', error);
+      throw error;
     }
-
-    stmt.free();
-    return null;
   }
 
-  static updateRecipeQuantity(id: number, quantity: number): void {
-    const db = getDatabase();
-    const stmt = db.prepare('UPDATE recipes SET quantity = ? WHERE id = ?');
-    stmt.run([quantity, id]);
-    stmt.free();
+  static async deleteRecipesByMenuId(menuId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from(this.tableName)
+        .delete()
+        .eq('menu_id', menuId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting recipes by menu ID:', error);
+      throw error;
+    }
   }
+
+  static async getRecipeById(id: string): Promise<Recipe | null> {
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') return null;
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      console.error('Error getting recipe by ID:', error);
+      return null;
+    }
+  }
+
+  static async updateRecipeQuantity(id: string, quantity: number): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from(this.tableName)
+        .update({ quantity })
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating recipe quantity:', error);
+      throw error;
+    }
+  }
+
 }

@@ -25,8 +25,13 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
 
   useEffect(() => {
-    setMenus(MenuService.getAllMenus());
-    setIngredients(IngredientService.getAllIngredients());
+    const loadData = async () => {
+      const menusData = await MenuService.getAllMenus();
+      const ingredientsData = await IngredientService.getAllIngredients();
+      setMenus(menusData);
+      setIngredients(ingredientsData);
+    };
+    loadData();
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -39,8 +44,8 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
       }
 
       onSubmit({
-        menu_id: menuId,
-        ingredient_id: ingredientId,
+        menu_id: String(menuId),
+        ingredient_id: String(ingredientId),
         quantity: quantityValue
       });
 

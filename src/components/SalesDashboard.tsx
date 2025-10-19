@@ -25,11 +25,11 @@ const SalesDashboard: React.FC = () => {
     setToast({ show: false, message: '', type: 'success' });
   };
 
-  const loadData = () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const analyticsData = SalesService.getSalesAnalytics();
-      const scheduleData = SalesService.getDepositSchedule();
+      const analyticsData = await SalesService.getSalesAnalytics();
+      const scheduleData = await SalesService.getDepositSchedule();
 
       setAnalytics(analyticsData);
       setDepositSchedule(scheduleData);
@@ -40,11 +40,11 @@ const SalesDashboard: React.FC = () => {
     }
   };
 
-  const handleMarkAsDeposited = async (orderId: number) => {
+  const handleMarkAsDeposited = async (orderId: string) => {
     try {
-      SalesService.markAsDeposited(orderId);
+      await SalesService.markAsDeposited(orderId);
       showToast('입금 완료 처리되었습니다.', 'success');
-      loadData();
+      await loadData();
     } catch (error) {
       showToast('입금 처리에 실패했습니다.', 'error');
     }

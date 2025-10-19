@@ -38,7 +38,7 @@ export const IngredientsPage: React.FC = () => {
   const loadIngredients = async () => {
     setLoading(true);
     try {
-      const data = IngredientService.getAllIngredients();
+      const data = await IngredientService.getAllIngredients();
       setIngredients(data);
     } catch (err) {
       showToast('재료 목록을 불러오는데 실패했습니다.', 'error');

@@ -20,9 +20,9 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ onOrderUpdate }) => {
     loadOrders();
   }, []);
 
-  const loadOrders = () => {
+  const loadOrders = async () => {
     try {
-      const orderData = OrderService.getAllOrders();
+      const orderData = await OrderService.getAllOrders();
       // 최근 주문부터 표시
       setOrders(orderData.sort((a, b) =>
         new Date(b.order_date || 0).getTime() - new Date(a.order_date || 0).getTime()
@@ -32,9 +32,9 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ onOrderUpdate }) => {
     }
   };
 
-  const loadOrderItems = (orderId: number) => {
+  const loadOrderItems = async (orderId: string) => {
     try {
-      const items = OrderService.getOrderItemsWithDetails(orderId);
+      const items = await OrderService.getOrderItemsWithDetails(orderId);
       setOrderItems(items);
     } catch (err) {
       setError('주문 상세 정보를 불러오는데 실패했습니다.');
@@ -62,14 +62,14 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ onOrderUpdate }) => {
 
     try {
       // 주문 아이템들의 재료를 재고에 다시 추가
-      const items = OrderService.getOrderItemsWithDetails(order.id!);
+      const items = await OrderService.getOrderItemsWithDetails(order.id!);
 
       for (const item of items) {
-        const recipes = MenuService.getRecipesByMenuId(item.menu_id);
+        const recipes = await MenuService.getRecipesByMenuId(item.menu_id);
 
         for (const recipe of recipes) {
           const returnAmount = recipe.quantity * item.quantity;
-          InventoryService.adjustStock(
+          await InventoryService.adjustStock(
             recipe.ingredient_id,
             returnAmount,
             'IN',
@@ -79,10 +79,10 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ onOrderUpdate }) => {
       }
 
       // 주문 삭제
-      OrderService.deleteOrder(order.id!);
+      await OrderService.deleteOrder(order.id!);
 
       setSuccess('주문이 성공적으로 취소되었습니다.');
-      loadOrders();
+      await loadOrders();
 
       if (selectedOrder?.id === order.id) {
         setSelectedOrder(null);
@@ -101,9 +101,9 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ onOrderUpdate }) => {
   };
 
   const modifyOrderItemQuantity = async (
-    orderId: number,
-    itemId: number,
-    menuId: number,
+    orderId: string,
+    itemId: string,
+    menuId: string,
     currentQuantity: number,
     newQuantity: number
   ) => {
@@ -126,21 +126,21 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ onOrderUpdate }) => {
 
     try {
       // 재고 조정
-      const recipes = MenuService.getRecipesByMenuId(menuId);
+      const recipes = await MenuService.getRecipesByMenuId(menuId);
 
       for (const recipe of recipes) {
         const stockChange = recipe.quantity * Math.abs(quantityDiff);
 
         if (quantityDiff > 0) {
           // 수량 증가 - 재고 차감
-          const inventory = InventoryService.getInventoryByIngredientId(recipe.ingredient_id);
+          const inventory = await InventoryService.getInventoryByIngredientId(recipe.ingredient_id);
           if (!inventory || inventory.current_stock < stockChange) {
             setError(`재고가 부족합니다: ${recipe.ingredient_name} (필요: ${stockChange}, 재고: ${inventory?.current_stock || 0})`);
             setLoading(false);
             return;
           }
 
-          InventoryService.adjustStock(
+          await InventoryService.adjustStock(
             recipe.ingredient_id,
             stockChange,
             'OUT',
@@ -148,7 +148,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ onOrderUpdate }) => {
           );
         } else {
           // 수량 감소 - 재고 반환
-          InventoryService.adjustStock(
+          await InventoryService.adjustStock(
             recipe.ingredient_id,
             stockChange,
             'IN',
@@ -158,16 +158,16 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ onOrderUpdate }) => {
       }
 
       // 주문 아이템 수량 업데이트
-      OrderService.updateOrderItemQuantity(itemId, newQuantity);
+      await OrderService.updateOrderItemQuantity(itemId, newQuantity);
 
       // 주문 총액 재계산
-      const updatedItems = OrderService.getOrderItemsWithDetails(orderId);
+      const updatedItems = await OrderService.getOrderItemsWithDetails(orderId);
       const newTotal = updatedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-      OrderService.updateOrderTotal(orderId, newTotal);
+      await OrderService.updateOrderTotal(orderId, newTotal);
 
       setSuccess('주문이 성공적으로 수정되었습니다.');
-      loadOrders();
-      loadOrderItems(orderId);
+      await loadOrders();
+      await loadOrderItems(orderId);
 
       if (onOrderUpdate) {
         onOrderUpdate();
@@ -180,7 +180,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ onOrderUpdate }) => {
     }
   };
 
-  const removeOrderItem = async (orderId: number, itemId: number, menuId: number, quantity: number) => {
+  const removeOrderItem = async (orderId: string, itemId: string, menuId: string, quantity: number) => {
     if (!window.confirm('이 메뉴를 주문에서 제거하시겠습니까?\n재고가 반환됩니다.')) {
       return;
     }
@@ -190,11 +190,11 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ onOrderUpdate }) => {
 
     try {
       // 재고 반환
-      const recipes = MenuService.getRecipesByMenuId(menuId);
+      const recipes = await MenuService.getRecipesByMenuId(menuId);
 
       for (const recipe of recipes) {
         const returnAmount = recipe.quantity * quantity;
-        InventoryService.adjustStock(
+        await InventoryService.adjustStock(
           recipe.ingredient_id,
           returnAmount,
           'IN',
@@ -203,23 +203,23 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ onOrderUpdate }) => {
       }
 
       // 주문 아이템 삭제
-      OrderService.deleteOrderItem(itemId);
+      await OrderService.deleteOrderItem(itemId);
 
       // 주문 총액 재계산
-      const updatedItems = OrderService.getOrderItemsWithDetails(orderId);
+      const updatedItems = await OrderService.getOrderItemsWithDetails(orderId);
       if (updatedItems.length === 0) {
         // 모든 아이템이 제거되면 주문 삭제
-        OrderService.deleteOrder(orderId);
+        await OrderService.deleteOrder(orderId);
         setSelectedOrder(null);
         setOrderItems([]);
       } else {
         const newTotal = updatedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-        OrderService.updateOrderTotal(orderId, newTotal);
-        loadOrderItems(orderId);
+        await OrderService.updateOrderTotal(orderId, newTotal);
+        await loadOrderItems(orderId);
       }
 
       setSuccess('주문 아이템이 제거되었습니다.');
-      loadOrders();
+      await loadOrders();
 
       if (onOrderUpdate) {
         onOrderUpdate();

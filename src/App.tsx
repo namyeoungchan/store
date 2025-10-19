@@ -1,20 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import './App.css';
 import { initDatabase } from './database/database';
-import { insertDummyData } from './data/dummyData'; // 더미 데이터 - 나중에 삭제 예정
 import { AuthService } from './services/authService';
 import ProtectedRoute from './components/ProtectedRoute';
-import UserApp from './components/UserApp';
-import DashboardPage from './pages/DashboardPage';
-import { IngredientsPage } from './pages/IngredientsPage';
-import { MenusPage } from './pages/MenusPage';
-import InventoryPage from './pages/InventoryPage';
-import OrdersPage from './pages/OrdersPage';
-import SalesPage from './pages/SalesPage';
-import SalesCalendarPage from "./pages/SalesCalendarPage";
-import UserManagementPage from './pages/UserManagementPage';
 
-type PageType = 'dashboard' | 'ingredients' | 'menus' | 'inventory' | 'orders' | 'sales' | 'sales-calendar' | 'users';
+// 첫 번째로 렌더링되는 페이지는 즉시 로드
+import DashboardPage from './pages/DashboardPage';
+
+// 나머지 페이지들은 lazy loading 적용 (사용자가 클릭할 때 로드)
+const UserApp = lazy(() => import('./components/UserApp'));
+const IngredientsPage = lazy(() => import('./pages/IngredientsPage').then(module => ({ default: module.IngredientsPage })));
+const MenusPage = lazy(() => import('./pages/MenusPage').then(module => ({ default: module.MenusPage })));
+const InventoryPage = lazy(() => import('./pages/InventoryPage'));
+const OrdersPage = lazy(() => import('./pages/OrdersPage'));
+const SalesPage = lazy(() => import('./pages/SalesPage'));
+const SalesCalendarPage = lazy(() => import('./pages/SalesCalendarPage'));
+const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
+
+type PageType = 'dashboard' | 'ingredients' | 'menus' | 'inventory' | 'orders' | 'sales' | 'sales-calendar' | 'users' | 'database-settings';
 type AppMode = 'select' | 'admin' | 'user';
 
 function App() {
@@ -27,16 +30,17 @@ function App() {
     const initializeApp = async () => {
       try {
         await initDatabase();
-        console.log('Database initialized successfully');
+        console.log('Firestore database initialized successfully');
 
         // 더미 데이터 추가 (실제 운영 시 삭제 예정)
-        insertDummyData();
+        // Firebase/Firestore는 스키마가 필요 없으므로 더미 데이터는 필요에 따라 추가
+        // insertDummyData();
 
         // 현재 사용자 정보 설정
         const user = AuthService.getCurrentUser();
         setCurrentUser(user);
       } catch (error) {
-        console.error('Failed to initialize database:', error);
+        console.error('Failed to initialize Firestore:', error);
       } finally {
         setIsLoading(false);
       }
@@ -54,24 +58,60 @@ function App() {
     }
   };
 
+  // 페이지 로딩을 위한 fallback 컴포넌트
+  const PageLoader = () => (
+    <div className="page-loading">
+      <div className="loading-spinner"></div>
+      <p>페이지를 불러오는 중...</p>
+    </div>
+  );
+
   const renderCurrentPage = () => {
     switch (currentPage) {
       case 'dashboard':
         return <DashboardPage />;
       case 'ingredients':
-        return <IngredientsPage />;
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <IngredientsPage />
+          </Suspense>
+        );
       case 'menus':
-        return <MenusPage />;
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <MenusPage />
+          </Suspense>
+        );
       case 'inventory':
-        return <InventoryPage />;
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <InventoryPage />
+          </Suspense>
+        );
       case 'orders':
-        return <OrdersPage />;
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <OrdersPage />
+          </Suspense>
+        );
       case 'sales':
-        return <SalesPage />;
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <SalesPage />
+          </Suspense>
+        );
       case 'sales-calendar':
-        return <SalesCalendarPage/>
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <SalesCalendarPage />
+          </Suspense>
+        );
       case 'users':
-        return <UserManagementPage/>
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <UserManagementPage />
+          </Suspense>
+        );
       default:
         return <DashboardPage />;
     }
@@ -146,7 +186,11 @@ function App() {
 
   // 일반 사용자 앱
   if (appMode === 'user') {
-    return <UserApp />;
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <UserApp />
+      </Suspense>
+    );
   }
 
   // 관리자 앱 (기존 코드)
@@ -239,6 +283,17 @@ function App() {
               >
                 <span className="nav-icon">👥</span>
                 <span className="nav-text">직원 관리</span>
+              </button>
+            </div>
+
+            <div className="menu-section">
+              <div className="menu-label">시스템 설정</div>
+              <button
+                className={`nav-item ${currentPage === 'database-settings' ? 'active' : ''}`}
+                onClick={() => setCurrentPage('database-settings')}
+              >
+                <span className="nav-icon">🗃️</span>
+                <span className="nav-text">데이터베이스 설정</span>
               </button>
             </div>
           </div>

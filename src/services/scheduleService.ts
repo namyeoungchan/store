@@ -1,155 +1,120 @@
-import { getDatabase, persistDatabase } from '../database/database';
+import { supabase } from '../firebase/config';
 import { WorkSchedule } from '../types';
 
 export class ScheduleService {
-  private static getDb() {
-    return getDatabase();
-  }
+  private static tableName = 'work_schedules';
 
-  static async getScheduleByUserAndWeek(userId: number, weekStartDate: string): Promise<WorkSchedule | null> {
-    const db = this.getDb();
-    const result = db.exec(`
-      SELECT * FROM work_schedules
-      WHERE user_id = ? AND week_start_date = ?
-    `, [userId, weekStartDate]);
+  static async getScheduleByUserAndWeek(userId: string, weekStartDate: string): Promise<WorkSchedule | null> {
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('user_id', userId)
+        .eq('week_start_date', weekStartDate)
+        .single();
 
-    if (result.length === 0 || result[0].values.length === 0) return null;
-
-    const row = result[0].values[0];
-    return {
-      id: row[0] as number,
-      user_id: row[1] as number,
-      week_start_date: row[2] as string,
-      monday_start: row[3] as string,
-      monday_end: row[4] as string,
-      tuesday_start: row[5] as string,
-      tuesday_end: row[6] as string,
-      wednesday_start: row[7] as string,
-      wednesday_end: row[8] as string,
-      thursday_start: row[9] as string,
-      thursday_end: row[10] as string,
-      friday_start: row[11] as string,
-      friday_end: row[12] as string,
-      saturday_start: row[13] as string,
-      saturday_end: row[14] as string,
-      sunday_start: row[15] as string,
-      sunday_end: row[16] as string,
-      created_at: row[17] as string,
-      updated_at: row[18] as string,
-    };
+      if (error) {
+        if (error.code === 'PGRST116') return null;
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      console.error('Error getting schedule by user and week:', error);
+      return null;
+    }
   }
 
   static async createOrUpdateSchedule(schedule: Omit<WorkSchedule, 'id' | 'created_at' | 'updated_at'>): Promise<WorkSchedule> {
-    const db = this.getDb();
+    try {
+      const existing = await this.getScheduleByUserAndWeek(schedule.user_id, schedule.week_start_date);
 
-    const existing = await this.getScheduleByUserAndWeek(schedule.user_id, schedule.week_start_date);
+      const scheduleData = {
+        user_id: schedule.user_id,
+        week_start_date: schedule.week_start_date,
+        monday_start: schedule.monday_start || null,
+        monday_end: schedule.monday_end || null,
+        tuesday_start: schedule.tuesday_start || null,
+        tuesday_end: schedule.tuesday_end || null,
+        wednesday_start: schedule.wednesday_start || null,
+        wednesday_end: schedule.wednesday_end || null,
+        thursday_start: schedule.thursday_start || null,
+        thursday_end: schedule.thursday_end || null,
+        friday_start: schedule.friday_start || null,
+        friday_end: schedule.friday_end || null,
+        saturday_start: schedule.saturday_start || null,
+        saturday_end: schedule.saturday_end || null,
+        sunday_start: schedule.sunday_start || null,
+        sunday_end: schedule.sunday_end || null
+      };
 
-    if (existing) {
-      const stmt = db.prepare(`
-        UPDATE work_schedules SET
-          monday_start = ?, monday_end = ?,
-          tuesday_start = ?, tuesday_end = ?,
-          wednesday_start = ?, wednesday_end = ?,
-          thursday_start = ?, thursday_end = ?,
-          friday_start = ?, friday_end = ?,
-          saturday_start = ?, saturday_end = ?,
-          sunday_start = ?, sunday_end = ?,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = ? AND week_start_date = ?
-      `);
+      if (existing) {
+        const { data, error } = await supabase
+          .from(this.tableName)
+          .update(scheduleData)
+          .eq('id', existing.id!)
+          .select()
+          .single();
 
-      stmt.run([
-        schedule.monday_start || null, schedule.monday_end || null,
-        schedule.tuesday_start || null, schedule.tuesday_end || null,
-        schedule.wednesday_start || null, schedule.wednesday_end || null,
-        schedule.thursday_start || null, schedule.thursday_end || null,
-        schedule.friday_start || null, schedule.friday_end || null,
-        schedule.saturday_start || null, schedule.saturday_end || null,
-        schedule.sunday_start || null, schedule.sunday_end || null,
-        schedule.user_id, schedule.week_start_date
-      ]);
+        if (error) throw error;
+        return data;
+      } else {
+        const { data, error } = await supabase
+          .from(this.tableName)
+          .insert(scheduleData)
+          .select()
+          .single();
 
-      // 데이터베이스 변경사항 저장
-      persistDatabase();
-
-      return this.getScheduleByUserAndWeek(schedule.user_id, schedule.week_start_date) as Promise<WorkSchedule>;
-    } else {
-      const stmt = db.prepare(`
-        INSERT INTO work_schedules (
-          user_id, week_start_date,
-          monday_start, monday_end,
-          tuesday_start, tuesday_end,
-          wednesday_start, wednesday_end,
-          thursday_start, thursday_end,
-          friday_start, friday_end,
-          saturday_start, saturday_end,
-          sunday_start, sunday_end
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      stmt.run([
-        schedule.user_id, schedule.week_start_date,
-        schedule.monday_start || null, schedule.monday_end || null,
-        schedule.tuesday_start || null, schedule.tuesday_end || null,
-        schedule.wednesday_start || null, schedule.wednesday_end || null,
-        schedule.thursday_start || null, schedule.thursday_end || null,
-        schedule.friday_start || null, schedule.friday_end || null,
-        schedule.saturday_start || null, schedule.saturday_end || null,
-        schedule.sunday_start || null, schedule.sunday_end || null
-      ]);
-
-      // 데이터베이스 변경사항 저장
-      persistDatabase();
-
-      return this.getScheduleByUserAndWeek(schedule.user_id, schedule.week_start_date) as Promise<WorkSchedule>;
+        if (error) throw error;
+        return data;
+      }
+    } catch (error) {
+      console.error('Error creating or updating schedule:', error);
+      throw error;
     }
   }
 
   static async getWeekSchedules(weekStartDate: string): Promise<(WorkSchedule & { user_name: string })[]> {
-    const db = this.getDb();
-    const result = db.exec(`
-      SELECT ws.*, u.full_name as user_name
-      FROM work_schedules ws
-      JOIN users u ON ws.user_id = u.id
-      WHERE ws.week_start_date = ? AND u.is_active = 1
-      ORDER BY u.full_name
-    `, [weekStartDate]);
+    try {
+      const { data: schedules, error } = await supabase
+        .from(this.tableName)
+        .select(`
+          *,
+          users!inner(
+            full_name,
+            is_active
+          )
+        `)
+        .eq('week_start_date', weekStartDate)
+        .eq('users.is_active', true);
 
-    if (result.length === 0) return [];
+      if (error) throw error;
 
-    return result[0].values.map(row => ({
-      id: row[0] as number,
-      user_id: row[1] as number,
-      week_start_date: row[2] as string,
-      monday_start: row[3] as string,
-      monday_end: row[4] as string,
-      tuesday_start: row[5] as string,
-      tuesday_end: row[6] as string,
-      wednesday_start: row[7] as string,
-      wednesday_end: row[8] as string,
-      thursday_start: row[9] as string,
-      thursday_end: row[10] as string,
-      friday_start: row[11] as string,
-      friday_end: row[12] as string,
-      saturday_start: row[13] as string,
-      saturday_end: row[14] as string,
-      sunday_start: row[15] as string,
-      sunday_end: row[16] as string,
-      created_at: row[17] as string,
-      updated_at: row[18] as string,
-      user_name: row[19] as string,
-    }));
+      const schedulesWithUsers = (schedules || []).map((schedule: any) => ({
+        ...schedule,
+        user_name: schedule.users.full_name
+      }));
+
+      return schedulesWithUsers.sort((a, b) => a.user_name.localeCompare(b.user_name));
+    } catch (error) {
+      console.error('Error getting week schedules:', error);
+      return [];
+    }
   }
 
-  static async deleteSchedule(userId: number, weekStartDate: string): Promise<boolean> {
-    const db = this.getDb();
-    const stmt = db.prepare('DELETE FROM work_schedules WHERE user_id = ? AND week_start_date = ?');
-    stmt.run([userId, weekStartDate]);
+  static async deleteSchedule(userId: string, weekStartDate: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from(this.tableName)
+        .delete()
+        .eq('user_id', userId)
+        .eq('week_start_date', weekStartDate);
 
-    // 데이터베이스 변경사항 저장
-    persistDatabase();
-
-    return true;
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting schedule:', error);
+      return false;
+    }
   }
 
   static getWeekDates(weekStartDate: string): string[] {
@@ -178,4 +143,5 @@ export class ScheduleService {
     const monday = new Date(targetDate.setDate(diff));
     return monday.toISOString().split('T')[0];
   }
+
 }

@@ -1,10 +1,20 @@
-import React, { useState } from 'react';
-import OrderSystem from '../components/OrderSystem';
-import OrderManagement from '../components/OrderManagement';
+import React, { useState, Suspense, lazy } from 'react';
+
+// 탭 기반으로 조건부 렌더링되는 큰 컴포넌트들은 lazy loading 적용
+const OrderSystem = lazy(() => import('../components/OrderSystem'));
+const OrderManagement = lazy(() => import('../components/OrderManagement'));
 
 const OrdersPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'order' | 'manage'>('order');
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // 컴포넌트 로딩을 위한 fallback
+  const ComponentLoader = () => (
+    <div className="component-loading">
+      <div className="loading-spinner"></div>
+      <p>컴포넌트를 불러오는 중...</p>
+    </div>
+  );
 
   const handleOrderComplete = () => {
     setRefreshKey(prev => prev + 1);
@@ -46,16 +56,20 @@ const OrdersPage: React.FC = () => {
 
       <div className="page-content">
         {activeTab === 'order' && (
-          <OrderSystem
-            key={`order-${refreshKey}`}
-            onOrderComplete={handleOrderComplete}
-          />
+          <Suspense fallback={<ComponentLoader />}>
+            <OrderSystem
+              key={`order-${refreshKey}`}
+              onOrderComplete={handleOrderComplete}
+            />
+          </Suspense>
         )}
         {activeTab === 'manage' && (
-          <OrderManagement
-            key={`manage-${refreshKey}`}
-            onOrderUpdate={handleOrderUpdate}
-          />
+          <Suspense fallback={<ComponentLoader />}>
+            <OrderManagement
+              key={`manage-${refreshKey}`}
+              onOrderUpdate={handleOrderUpdate}
+            />
+          </Suspense>
         )}
       </div>
 

@@ -20,8 +20,8 @@ const OrderSystem: React.FC<OrderSystemProps> = ({ onOrderComplete }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [menuRecipes, setMenuRecipes] = useState<{ [menuId: number]: RecipeWithDetails[] }>({});
-  const [menuAvailability, setMenuAvailability] = useState<{ [menuId: number]: { available: boolean; reason?: string } }>({});
+  const [menuRecipes, setMenuRecipes] = useState<{ [menuId: string]: RecipeWithDetails[] }>({});
+  const [menuAvailability, setMenuAvailability] = useState<{ [menuId: string]: { available: boolean; reason?: string } }>({});
   const [selectedPaymentType, setSelectedPaymentType] = useState<PaymentType>('CARD');
 
   useEffect(() => {
@@ -32,16 +32,16 @@ const OrderSystem: React.FC<OrderSystemProps> = ({ onOrderComplete }) => {
     checkMenuAvailability();
   }, [menus, cart]);
 
-  const loadMenus = () => {
+  const loadMenus = async () => {
     try {
-      const menuData = MenuService.getAllMenus();
+      const menuData = await MenuService.getAllMenus();
       setMenus(menuData);
 
       // Load recipes for all menus
-      const recipes: { [menuId: number]: RecipeWithDetails[] } = {};
+      const recipes: { [menuId: string]: RecipeWithDetails[] } = {};
       for (const menu of menuData) {
         if (menu.id) {
-          recipes[menu.id] = MenuService.getRecipesByMenuId(menu.id);
+          recipes[menu.id] = await MenuService.getRecipesByMenuId(menu.id);
         }
       }
       setMenuRecipes(recipes);
@@ -50,8 +50,8 @@ const OrderSystem: React.FC<OrderSystemProps> = ({ onOrderComplete }) => {
     }
   };
 
-  const checkMenuAvailability = () => {
-    const availability: { [menuId: number]: { available: boolean; reason?: string } } = {};
+  const checkMenuAvailability = async () => {
+    const availability: { [menuId: string]: { available: boolean; reason?: string } } = {};
 
     for (const menu of menus) {
       if (!menu.id) continue;
@@ -70,7 +70,7 @@ const OrderSystem: React.FC<OrderSystemProps> = ({ onOrderComplete }) => {
       let maxQuantity = Infinity;
 
       for (const recipe of recipes) {
-        const inventory = InventoryService.getInventoryByIngredientId(recipe.ingredient_id);
+        const inventory = await InventoryService.getInventoryByIngredientId(recipe.ingredient_id);
         if (!inventory) {
           availability[menu.id] = {
             available: false,
@@ -131,8 +131,8 @@ const OrderSystem: React.FC<OrderSystemProps> = ({ onOrderComplete }) => {
       ));
     } else {
       const newItem: CartItem = {
-        id: Date.now(),
-        order_id: 0,
+        id: Date.now().toString(),
+        order_id: "0",
         menu_id: menu.id!,
         quantity: 1,
         unit_price: menu.price,
@@ -146,7 +146,7 @@ const OrderSystem: React.FC<OrderSystemProps> = ({ onOrderComplete }) => {
     setTimeout(() => setSuccess(''), 2000);
   };
 
-  const updateQuantity = (menuId: number, newQuantity: number) => {
+  const updateQuantity = (menuId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
       removeFromCart(menuId);
       return;
@@ -159,7 +159,7 @@ const OrderSystem: React.FC<OrderSystemProps> = ({ onOrderComplete }) => {
     ));
   };
 
-  const removeFromCart = (menuId: number) => {
+  const removeFromCart = (menuId: string) => {
     setCart(cart.filter(item => item.menu_id !== menuId));
   };
 
@@ -206,13 +206,13 @@ ${cart.map(item => `• ${item.menu_name} x${item.quantity} = ₩${(item.unit_pr
         unit_price: item.unit_price
       }));
 
-      const orderId = OrderService.createOrderWithItems(orderItems, selectedPaymentType);
+      const orderId = await OrderService.createOrderWithItems(orderItems, selectedPaymentType);
 
       setSuccess('주문이 성공적으로 완료되었습니다!');
       setCart([]);
 
       if (onOrderComplete) {
-        const order = OrderService.getOrderById(orderId);
+        const order = await OrderService.getOrderById(orderId);
         if (order) {
           onOrderComplete(order);
         }

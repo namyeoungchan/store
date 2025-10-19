@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { User, UserWithSchedule } from '../types';
 import { UserService } from '../services/userService';
-import UserList from '../components/UserManagement/UserList';
-import UserForm from '../components/UserManagement/UserForm';
-import ScheduleManagement from '../components/UserManagement/ScheduleManagement';
-import WorkTimeAnalysis from '../components/UserManagement/WorkTimeAnalysis';
-import ConfirmDialog from '../components/ConfirmDialog';
+import UserList from '../components/UserManagement/UserList'; // 기본 탭이므로 즉시 로드
+import ConfirmDialog from '../components/ConfirmDialog'; // 작은 컴포넌트이므로 즉시 로드
 import '../styles/components/ModernEmployeeManagement.css';
 
-type TabType = 'users' | 'schedule' | 'analysis';
+// 조건부 렌더링되는 큰 컴포넌트들은 lazy loading 적용
+const UserForm = lazy(() => import('../components/UserManagement/UserForm'));
+const ScheduleManagement = lazy(() => import('../components/UserManagement/ScheduleManagement'));
+const FixedScheduleManagement = lazy(() => import('../components/UserManagement/FixedScheduleManagement'));
+const WorkTimeAnalysis = lazy(() => import('../components/UserManagement/WorkTimeAnalysis'));
+
+type TabType = 'users' | 'schedule' | 'fixed-schedule' | 'analysis';
 
 const UserManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('users');
@@ -119,6 +122,14 @@ const UserManagementPage: React.FC = () => {
     }
   };
 
+  // 컴포넌트 로딩을 위한 fallback
+  const ComponentLoader = () => (
+    <div className="component-loading">
+      <div className="loading-spinner"></div>
+      <p>컴포넌트를 불러오는 중...</p>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -183,7 +194,8 @@ const UserManagementPage: React.FC = () => {
         <div className="tab-container">
           {[
             { key: 'users', icon: '👤', label: '직원 관리', color: 'blue' },
-            { key: 'schedule', icon: '📅', label: '스케줄 관리', color: 'purple' },
+            { key: 'schedule', icon: '📅', label: '주간 스케줄', color: 'purple' },
+            { key: 'fixed-schedule', icon: '🔒', label: '고정 스케줄', color: 'orange' },
             { key: 'analysis', icon: '📊', label: '근무 분석', color: 'green' }
           ].map(tab => (
             <button
@@ -213,28 +225,42 @@ const UserManagementPage: React.FC = () => {
           )}
 
           {activeTab === 'schedule' && (
-            <ScheduleManagement
-              users={usersWithSchedule}
-              onScheduleUpdate={loadUsers}
-            />
+            <Suspense fallback={<ComponentLoader />}>
+              <ScheduleManagement
+                users={usersWithSchedule}
+                onScheduleUpdate={loadUsers}
+              />
+            </Suspense>
+          )}
+
+          {activeTab === 'fixed-schedule' && (
+            <Suspense fallback={<ComponentLoader />}>
+              <FixedScheduleManagement
+                users={users}
+              />
+            </Suspense>
           )}
 
           {activeTab === 'analysis' && (
-            <WorkTimeAnalysis />
+            <Suspense fallback={<ComponentLoader />}>
+              <WorkTimeAnalysis />
+            </Suspense>
           )}
         </div>
       </div>
 
       {/* Modern User Form Modal */}
       {showUserForm && (
-        <UserForm
-          user={selectedUser}
-          onSubmit={handleUserFormSubmit}
-          onCancel={() => {
-            setShowUserForm(false);
-            setSelectedUser(null);
-          }}
-        />
+        <Suspense fallback={<ComponentLoader />}>
+          <UserForm
+            user={selectedUser}
+            onSubmit={handleUserFormSubmit}
+            onCancel={() => {
+              setShowUserForm(false);
+              setSelectedUser(null);
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Confirm Dialog */}

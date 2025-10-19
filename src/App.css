@@ -291,6 +291,69 @@ body {
   100% { transform: rotate(360deg); }
 }
 
+/* Page Loading (for lazy loaded components) */
+.page-loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  padding: var(--space-20);
+  background: var(--gray-50);
+  border-radius: 12px;
+  margin: var(--space-6);
+  color: var(--gray-700);
+}
+
+.page-loading .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--primary-200);
+  border-top: 3px solid var(--primary-600);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: var(--space-4);
+}
+
+.page-loading p {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--gray-600);
+  margin: 0;
+}
+
+/* Component Loading (for lazy loaded components within pages) */
+.component-loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  padding: var(--space-12);
+  background: rgba(248, 250, 252, 0.8);
+  border-radius: 8px;
+  margin: var(--space-4);
+  color: var(--gray-700);
+  backdrop-filter: blur(4px);
+}
+
+.component-loading .loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--primary-200);
+  border-top: 2px solid var(--primary-600);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: var(--space-3);
+}
+
+.component-loading p {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-600);
+  margin: 0;
+}
+
 /* App Mode Selection Screen */
 .app-mode-select {
   min-height: 100vh;

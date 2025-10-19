@@ -1,219 +1,218 @@
-import { getDatabase } from '../database/database';
+import { supabase } from '../firebase/config';
 import { Inventory, InventoryWithDetails, InventoryHistory, InventoryHistoryWithDetails } from '../types';
 
 export class InventoryService {
-  static getAllInventoryWithDetails(): InventoryWithDetails[] {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      SELECT
-        inv.*,
-        i.name as ingredient_name,
-        i.unit as ingredient_unit
-      FROM inventory inv
-      JOIN ingredients i ON inv.ingredient_id = i.id
-      ORDER BY i.name
-    `);
+  private static tableName = 'inventory';
+  private static historyTableName = 'inventory_history';
 
-    const inventory: InventoryWithDetails[] = [];
+  static async getAllInventoryWithDetails(): Promise<InventoryWithDetails[]> {
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select(`
+          *,
+          ingredients!inner(
+            name,
+            unit
+          )
+        `);
 
-    while (stmt.step()) {
-      const row = stmt.getAsObject();
-      inventory.push({
-        id: row.id as number,
-        ingredient_id: row.ingredient_id as number,
-        current_stock: row.current_stock as number,
-        min_stock: row.min_stock as number,
-        updated_at: row.updated_at as string,
-        ingredient_name: row.ingredient_name as string,
-        ingredient_unit: row.ingredient_unit as string
+      if (error) throw error;
+
+      const inventoryWithDetails = (data || []).map((item: any) => ({
+        id: item.id,
+        ingredient_id: item.ingredient_id,
+        current_stock: item.current_stock || 0,
+        min_stock: item.min_stock || 0,
+        updated_at: item.updated_at,
+        ingredient_name: item.ingredients.name,
+        ingredient_unit: item.ingredients.unit
+      }));
+
+      return inventoryWithDetails.sort((a, b) => a.ingredient_name.localeCompare(b.ingredient_name));
+    } catch (error) {
+      console.error('Error getting inventory with details:', error);
+      return [];
+    }
+  }
+
+  static async getInventoryByIngredientId(ingredientId: string): Promise<Inventory | null> {
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('ingredient_id', ingredientId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') return null;
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      console.error('Error getting inventory by ingredient ID:', error);
+      return null;
+    }
+  }
+
+  static async updateStock(ingredientId: string, newStock: number, changeType: 'IN' | 'OUT' | 'ADJUST', notes?: string, orderId?: string): Promise<void> {
+    try {
+      // 현재 재고 조회
+      const currentInventory = await this.getInventoryByIngredientId(ingredientId);
+      if (!currentInventory) {
+        throw new Error('재고 정보를 찾을 수 없습니다.');
+      }
+
+      const previousStock = currentInventory.current_stock;
+      const quantity = Math.abs(newStock - previousStock);
+
+      // 재고 업데이트
+      const { error } = await supabase
+        .from(this.tableName)
+        .update({ current_stock: newStock })
+        .eq('id', currentInventory.id!);
+
+      if (error) throw error;
+
+      // 재고 이력 기록
+      await this.addInventoryHistory({
+        ingredient_id: ingredientId,
+        change_type: changeType,
+        quantity: quantity,
+        previous_stock: previousStock,
+        new_stock: newStock,
+        order_id: orderId,
+        notes: notes
       });
+    } catch (error) {
+      console.error('Error updating stock:', error);
+      throw error;
     }
-
-    stmt.free();
-    return inventory;
   }
 
-  static getInventoryByIngredientId(ingredientId: number): Inventory | null {
-    const db = getDatabase();
-    const stmt = db.prepare('SELECT * FROM inventory WHERE ingredient_id = ?');
-    stmt.bind([ingredientId]);
+  static async adjustStock(ingredientId: string, quantity: number, changeType: 'IN' | 'OUT', notes?: string, orderId?: string): Promise<void> {
+    try {
+      const currentInventory = await this.getInventoryByIngredientId(ingredientId);
+      if (!currentInventory) {
+        throw new Error('재고 정보를 찾을 수 없습니다.');
+      }
 
-    if (stmt.step()) {
-      const row = stmt.getAsObject();
-      stmt.free();
-      return {
-        id: row.id as number,
-        ingredient_id: row.ingredient_id as number,
-        current_stock: row.current_stock as number,
-        min_stock: row.min_stock as number,
-        updated_at: row.updated_at as string
-      };
-    }
+      const previousStock = currentInventory.current_stock;
+      const newStock = changeType === 'IN'
+        ? previousStock + quantity
+        : Math.max(0, previousStock - quantity);
 
-    stmt.free();
-    return null;
-  }
+      // 재고 업데이트
+      const { error } = await supabase
+        .from(this.tableName)
+        .update({ current_stock: newStock })
+        .eq('id', currentInventory.id!);
 
-  static updateStock(ingredientId: number, newStock: number, changeType: 'IN' | 'OUT' | 'ADJUST', notes?: string, orderId?: number): void {
-    const db = getDatabase();
+      if (error) throw error;
 
-    // 현재 재고 조회
-    const currentInventory = this.getInventoryByIngredientId(ingredientId);
-    if (!currentInventory) {
-      throw new Error('재고 정보를 찾을 수 없습니다.');
-    }
-
-    const previousStock = currentInventory.current_stock;
-    const quantity = newStock - previousStock;
-
-    // 재고 업데이트
-    const updateStmt = db.prepare(
-      'UPDATE inventory SET current_stock = ?, updated_at = CURRENT_TIMESTAMP WHERE ingredient_id = ?'
-    );
-    updateStmt.run([newStock, ingredientId]);
-    updateStmt.free();
-
-    // 재고 이력 기록
-    this.addInventoryHistory({
-      ingredient_id: ingredientId,
-      change_type: changeType,
-      quantity: Math.abs(quantity),
-      previous_stock: previousStock,
-      new_stock: newStock,
-      order_id: orderId,
-      notes: notes
-    });
-  }
-
-  static adjustStock(ingredientId: number, quantity: number, changeType: 'IN' | 'OUT', notes?: string, orderId?: number): void {
-    const db = getDatabase();
-
-    const currentInventory = this.getInventoryByIngredientId(ingredientId);
-    if (!currentInventory) {
-      throw new Error('재고 정보를 찾을 수 없습니다.');
-    }
-
-    const previousStock = currentInventory.current_stock;
-    const newStock = changeType === 'IN'
-      ? previousStock + quantity
-      : Math.max(0, previousStock - quantity);
-
-    // 재고 업데이트
-    const updateStmt = db.prepare(
-      'UPDATE inventory SET current_stock = ?, updated_at = CURRENT_TIMESTAMP WHERE ingredient_id = ?'
-    );
-    updateStmt.run([newStock, ingredientId]);
-    updateStmt.free();
-
-    // 재고 이력 기록
-    this.addInventoryHistory({
-      ingredient_id: ingredientId,
-      change_type: changeType,
-      quantity: quantity,
-      previous_stock: previousStock,
-      new_stock: newStock,
-      order_id: orderId,
-      notes: notes
-    });
-  }
-
-  static updateMinStock(ingredientId: number, minStock: number): void {
-    const db = getDatabase();
-    const stmt = db.prepare(
-      'UPDATE inventory SET min_stock = ?, updated_at = CURRENT_TIMESTAMP WHERE ingredient_id = ?'
-    );
-    stmt.run([minStock, ingredientId]);
-    stmt.free();
-  }
-
-  static addInventoryHistory(history: Omit<InventoryHistory, 'id' | 'created_at'>): void {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      INSERT INTO inventory_history
-      (ingredient_id, change_type, quantity, previous_stock, new_stock, order_id, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    stmt.run([
-      history.ingredient_id,
-      history.change_type,
-      history.quantity,
-      history.previous_stock,
-      history.new_stock,
-      history.order_id || null,
-      history.notes || null
-    ]);
-    stmt.free();
-  }
-
-  static getInventoryHistoryWithDetails(): InventoryHistoryWithDetails[] {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      SELECT
-        ih.*,
-        i.name as ingredient_name,
-        i.unit as ingredient_unit
-      FROM inventory_history ih
-      JOIN ingredients i ON ih.ingredient_id = i.id
-      ORDER BY ih.created_at DESC
-    `);
-
-    const history: InventoryHistoryWithDetails[] = [];
-
-    while (stmt.step()) {
-      const row = stmt.getAsObject();
-      history.push({
-        id: row.id as number,
-        ingredient_id: row.ingredient_id as number,
-        change_type: row.change_type as 'IN' | 'OUT' | 'ADJUST',
-        quantity: row.quantity as number,
-        previous_stock: row.previous_stock as number,
-        new_stock: row.new_stock as number,
-        order_id: row.order_id as number,
-        notes: row.notes as string,
-        created_at: row.created_at as string,
-        ingredient_name: row.ingredient_name as string,
-        ingredient_unit: row.ingredient_unit as string
+      // 재고 이력 기록
+      await this.addInventoryHistory({
+        ingredient_id: ingredientId,
+        change_type: changeType,
+        quantity: quantity,
+        previous_stock: previousStock,
+        new_stock: newStock,
+        order_id: orderId,
+        notes: notes
       });
+    } catch (error) {
+      console.error('Error adjusting stock:', error);
+      throw error;
     }
-
-    stmt.free();
-    return history;
   }
 
-  static getLowStockItems(): InventoryWithDetails[] {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      SELECT
-        inv.*,
-        i.name as ingredient_name,
-        i.unit as ingredient_unit
-      FROM inventory inv
-      JOIN ingredients i ON inv.ingredient_id = i.id
-      WHERE inv.current_stock <= inv.min_stock
-      ORDER BY (inv.current_stock - inv.min_stock) ASC
-    `);
+  static async updateMinStock(ingredientId: string, minStock: number): Promise<void> {
+    try {
+      const currentInventory = await this.getInventoryByIngredientId(ingredientId);
+      if (!currentInventory) {
+        throw new Error('재고 정보를 찾을 수 없습니다.');
+      }
 
-    const lowStockItems: InventoryWithDetails[] = [];
+      const { error } = await supabase
+        .from(this.tableName)
+        .update({ min_stock: minStock })
+        .eq('id', currentInventory.id!);
 
-    while (stmt.step()) {
-      const row = stmt.getAsObject();
-      lowStockItems.push({
-        id: row.id as number,
-        ingredient_id: row.ingredient_id as number,
-        current_stock: row.current_stock as number,
-        min_stock: row.min_stock as number,
-        updated_at: row.updated_at as string,
-        ingredient_name: row.ingredient_name as string,
-        ingredient_unit: row.ingredient_unit as string
-      });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating min stock:', error);
+      throw error;
     }
-
-    stmt.free();
-    return lowStockItems;
   }
 
-  static checkStockAvailability(ingredientId: number, requiredQuantity: number): boolean {
-    const inventory = this.getInventoryByIngredientId(ingredientId);
-    return inventory ? inventory.current_stock >= requiredQuantity : false;
+  static async addInventoryHistory(history: Omit<InventoryHistory, 'id' | 'created_at'>): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from(this.historyTableName)
+        .insert(history);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error adding inventory history:', error);
+      throw error;
+    }
+  }
+
+  static async getInventoryHistoryWithDetails(): Promise<InventoryHistoryWithDetails[]> {
+    try {
+      const { data, error } = await supabase
+        .from(this.historyTableName)
+        .select(`
+          *,
+          ingredients!inner(
+            name,
+            unit
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const historyWithDetails = (data || []).map((item: any) => ({
+        id: item.id,
+        ingredient_id: item.ingredient_id,
+        change_type: item.change_type as 'IN' | 'OUT' | 'ADJUST',
+        quantity: item.quantity,
+        previous_stock: item.previous_stock,
+        new_stock: item.new_stock,
+        order_id: item.order_id,
+        notes: item.notes,
+        created_at: item.created_at,
+        ingredient_name: item.ingredients.name,
+        ingredient_unit: item.ingredients.unit
+      }));
+
+      return historyWithDetails;
+    } catch (error) {
+      console.error('Error getting inventory history with details:', error);
+      return [];
+    }
+  }
+
+  static async getLowStockItems(): Promise<InventoryWithDetails[]> {
+    try {
+      const allInventory = await this.getAllInventoryWithDetails();
+      return allInventory
+        .filter(item => item.current_stock <= item.min_stock)
+        .sort((a, b) => (a.current_stock - a.min_stock) - (b.current_stock - b.min_stock));
+    } catch (error) {
+      console.error('Error getting low stock items:', error);
+      return [];
+    }
+  }
+
+  static async checkStockAvailability(ingredientId: string, requiredQuantity: number): Promise<boolean> {
+    try {
+      const inventory = await this.getInventoryByIngredientId(ingredientId);
+      return inventory ? inventory.current_stock >= requiredQuantity : false;
+    } catch (error) {
+      console.error('Error checking stock availability:', error);
+      return false;
+    }
   }
 }

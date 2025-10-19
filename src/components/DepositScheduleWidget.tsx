@@ -34,9 +34,9 @@ export const DepositScheduleWidget: React.FC<DepositScheduleWidgetProps> = ({ cl
     setLoading(true);
     try {
       // SalesService에서 실제 입금 예정 데이터 가져오기
-      const data = SalesService.getDepositSchedule();
+      const data = await SalesService.getDepositSchedule();
       setDepositSchedules(data);
-      onRefresh?.(); // 부모 컴포넌트 새로고침 알림
+      // onRefresh 제거 - 무한 호출 방지
     } catch (error) {
       console.error('입금 예정 데이터를 불러오는데 실패했습니다:', error);
     } finally {
@@ -50,7 +50,7 @@ export const DepositScheduleWidget: React.FC<DepositScheduleWidgetProps> = ({ cl
 
   const handleMarkAsDeposited = async (expectedDate: string) => {
     try {
-      const changedCount = SalesService.markDateAsDeposited(expectedDate);
+      const changedCount = await SalesService.markDateAsDeposited(expectedDate);
       if (changedCount > 0) {
         await loadDepositSchedules(); // 데이터 새로고침
         setSelectedDate(null); // 상세 보기 닫기

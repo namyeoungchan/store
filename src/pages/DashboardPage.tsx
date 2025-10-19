@@ -27,22 +27,22 @@ const DashboardPage: React.FC = () => {
     setLoading(true);
     try {
       // 매출 분석 데이터
-      const salesData = SalesService.getSalesAnalytics();
+      const salesData = await SalesService.getSalesAnalytics();
       setSalesAnalytics(salesData);
 
       // 낮은 재고 항목
-      const lowStock = InventoryService.getLowStockItems();
+      const lowStock = await InventoryService.getLowStockItems();
       setLowStockItems(lowStock);
 
       // 최근 주문 (최근 5개)
-      const orders = OrderService.getAllOrders().slice(0, 5);
-      setRecentOrders(orders);
+      const orders = await OrderService.getAllOrders();
+      setRecentOrders(orders.slice(0, 5));
 
       // 시스템 통계
-      const menus = MenuService.getAllMenus();
-      const ingredients = IngredientService.getAllIngredients();
-      const allOrders = OrderService.getAllOrders();
-      const inventories = InventoryService.getAllInventoryWithDetails();
+      const menus = await MenuService.getAllMenus();
+      const ingredients = await IngredientService.getAllIngredients();
+      const allOrders = await OrderService.getAllOrders();
+      const inventories = await InventoryService.getAllInventoryWithDetails();
 
       setSystemStats({
         totalMenus: menus.length,

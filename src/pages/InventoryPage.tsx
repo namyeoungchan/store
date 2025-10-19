@@ -41,7 +41,7 @@ const InventoryPage: React.FC = () => {
   const loadInventory = async () => {
     setLoading(true);
     try {
-      const data = InventoryService.getAllInventoryWithDetails();
+      const data = await InventoryService.getAllInventoryWithDetails();
       setInventory(data);
 
       // 선택된 아이템이 있다면 업데이트
@@ -61,7 +61,7 @@ const InventoryPage: React.FC = () => {
 
   const loadIngredients = async () => {
     try {
-      const data = IngredientService.getAllIngredients();
+      const data = await IngredientService.getAllIngredients();
       setIngredients(data);
     } catch (err) {
       showToast('재료 정보를 불러오는데 실패했습니다.', 'error');
@@ -71,7 +71,7 @@ const InventoryPage: React.FC = () => {
 
   const loadHistory = async () => {
     try {
-      const data = InventoryService.getInventoryHistoryWithDetails();
+      const data = await InventoryService.getInventoryHistoryWithDetails();
       setHistory(data);
     } catch (err) {
       showToast('재고 이력을 불러오는데 실패했습니다.', 'error');
@@ -79,10 +79,10 @@ const InventoryPage: React.FC = () => {
     }
   };
 
-  const handleUpdateStock = async (ingredientId: number, quantity: number, type: 'IN' | 'OUT', notes?: string) => {
+  const handleUpdateStock = async (ingredientId: string, quantity: number, type: 'IN' | 'OUT', notes?: string) => {
     setLoading(true);
     try {
-      InventoryService.adjustStock(ingredientId, quantity, type, notes);
+      await InventoryService.adjustStock(ingredientId, quantity, type, notes);
       await loadInventory();
       await loadHistory();
       const typeText = type === 'IN' ? '입고' : '출고';
@@ -94,10 +94,10 @@ const InventoryPage: React.FC = () => {
     }
   };
 
-  const handleUpdateMinStock = async (ingredientId: number, minStock: number) => {
+  const handleUpdateMinStock = async (ingredientId: string, minStock: number) => {
     setLoading(true);
     try {
-      InventoryService.updateMinStock(ingredientId, minStock);
+      await InventoryService.updateMinStock(ingredientId, minStock);
       await loadInventory();
       showToast('최소 재고량이 성공적으로 설정되었습니다.', 'success');
     } catch (err) {

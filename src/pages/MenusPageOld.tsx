@@ -37,9 +37,9 @@ export const MenusPage: React.FC = () => {
     loadRecipes();
   }, []);
 
-  const loadMenus = () => {
+  const loadMenus = async () => {
     try {
-      const data = MenuService.getAllMenus();
+      const data = await MenuService.getAllMenus();
       setMenus(data);
     } catch (err) {
       console.error('메뉴 목록을 불러오는데 실패했습니다.', err);
@@ -47,9 +47,9 @@ export const MenusPage: React.FC = () => {
     }
   };
 
-  const loadRecipes = () => {
+  const loadRecipes = async () => {
     try {
-      const data = RecipeService.getAllRecipesWithDetails();
+      const data = await RecipeService.getAllRecipesWithDetails();
       setRecipes(data);
     } catch (err) {
       console.error('레시피 목록을 불러오는데 실패했습니다.', err);
@@ -78,9 +78,9 @@ export const MenusPage: React.FC = () => {
     }
   };
 
-  const handleDeleteMenu = (id: number) => {
+  const handleDeleteMenu = async (id: string) => {
     try {
-      MenuService.deleteMenu(id);
+      await MenuService.deleteMenu(id);
       loadMenus();
       loadRecipes();
       if (selectedMenu?.id === id) {
@@ -113,9 +113,9 @@ export const MenusPage: React.FC = () => {
     }
   };
 
-  const handleDeleteRecipe = (id: number) => {
+  const handleDeleteRecipe = async (id: string) => {
     try {
-      RecipeService.deleteRecipe(id);
+      await RecipeService.deleteRecipe(id);
       loadRecipes();
     } catch (err) {
       console.error('레시피 삭제에 실패했습니다.', err);

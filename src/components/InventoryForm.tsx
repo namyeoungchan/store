@@ -4,8 +4,8 @@ import '../styles/components/InventoryForm.css';
 
 interface InventoryFormProps {
   inventory: InventoryWithDetails;
-  onUpdateStock: (ingredientId: number, quantity: number, type: 'IN' | 'OUT', notes?: string) => void;
-  onUpdateMinStock: (ingredientId: number, minStock: number) => void;
+  onUpdateStock: (ingredientId: string, quantity: number, type: 'IN' | 'OUT', notes?: string) => void;
+  onUpdateMinStock: (ingredientId: string, minStock: number) => void;
 }
 
 export const InventoryForm: React.FC<InventoryFormProps> = ({

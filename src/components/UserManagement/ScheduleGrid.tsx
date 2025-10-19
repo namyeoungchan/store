@@ -4,9 +4,9 @@ import { UserWithSchedule, WorkSchedule } from '../../types';
 interface ScheduleGridProps {
   users: UserWithSchedule[];
   selectedWeek: string;
-  getUserSchedule: (userId: number) => WorkSchedule | undefined;
-  onScheduleSave: (userId: number, scheduleData: Partial<WorkSchedule>) => void;
-  onScheduleDelete: (userId: number) => void;
+  getUserSchedule: (userId: string | number) => WorkSchedule | undefined;
+  onScheduleSave: (userId: string | number, scheduleData: Partial<WorkSchedule>) => void;
+  onScheduleDelete: (userId: string | number) => void;
 }
 
 const ScheduleGrid: React.FC<ScheduleGridProps> = ({
@@ -16,7 +16,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
   onScheduleSave,
   onScheduleDelete
 }) => {
-  const [editingUser, setEditingUser] = useState<number | null>(null);
+  const [editingUser, setEditingUser] = useState<string | number | null>(null);
   const [editingSchedule, setEditingSchedule] = useState<Partial<WorkSchedule>>({});
 
   const weekDays = [
@@ -30,8 +30,8 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
   ];
 
   const startEditUser = (user: UserWithSchedule) => {
-    const schedule = getUserSchedule(user.id!);
-    setEditingUser(user.id!);
+    const schedule = getUserSchedule(Number(user.id!));
+    setEditingUser(Number(user.id!));
     setEditingSchedule({
       monday_start: schedule?.monday_start || '',
       monday_end: schedule?.monday_end || '',
@@ -124,8 +124,8 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         </div>
 
         {users.map(user => {
-          const schedule = getUserSchedule(user.id!);
-          const isEditing = editingUser === user.id;
+          const schedule = getUserSchedule(Number(user.id!));
+          const isEditing = editingUser === Number(user.id);
           const weeklyHours = calculateWeeklyHours(schedule);
 
           return (
@@ -200,7 +200,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                     </button>
                     {hasSchedule(schedule) && (
                       <button
-                        onClick={() => onScheduleDelete(user.id!)}
+                        onClick={() => onScheduleDelete(Number(user.id!))}
                         className="delete-btn"
                         title="스케줄 삭제"
                       >
@@ -224,13 +224,13 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
           <div className="summary-item">
             <span className="summary-label">스케줄 설정 완료:</span>
             <span className="summary-value">
-              {users.filter(user => hasSchedule(getUserSchedule(user.id!))).length}명
+              {users.filter(user => hasSchedule(getUserSchedule(Number(user.id!)))).length}명
             </span>
           </div>
           <div className="summary-item">
             <span className="summary-label">전체 예상 근무시간:</span>
             <span className="summary-value">
-              {users.reduce((total, user) => total + calculateWeeklyHours(getUserSchedule(user.id!)), 0).toFixed(1)}시간
+              {users.reduce((total, user) => total + calculateWeeklyHours(getUserSchedule(Number(user.id!))), 0).toFixed(1)}시간
             </span>
           </div>
         </div>

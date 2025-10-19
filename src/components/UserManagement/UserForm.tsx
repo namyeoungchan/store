@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User } from '../../types';
+import { User, SalaryType } from '../../types';
 
 interface UserFormProps {
   user: User | null;
@@ -15,7 +15,9 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSubmit, onCancel }) => {
     phone: '',
     hire_date: '',
     position: '',
+    salary_type: 'HOURLY' as SalaryType,
     hourly_wage: 0,
+    monthly_salary: 0,
     is_active: true,
     generate_login: true,
   });
@@ -31,7 +33,9 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSubmit, onCancel }) => {
         phone: user.phone,
         hire_date: user.hire_date,
         position: user.position,
-        hourly_wage: user.hourly_wage,
+        salary_type: user.salary_type,
+        hourly_wage: user.hourly_wage || 0,
+        monthly_salary: user.monthly_salary || 0,
         is_active: user.is_active,
         generate_login: !!user.password_hash, // 기존에 로그인 권한이 있으면 true
       });
@@ -43,7 +47,9 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSubmit, onCancel }) => {
         phone: '',
         hire_date: new Date().toISOString().split('T')[0],
         position: '',
+        salary_type: 'HOURLY',
         hourly_wage: 0,
+        monthly_salary: 0,
         is_active: true,
         generate_login: true,
       });
@@ -79,8 +85,12 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSubmit, onCancel }) => {
       newErrors.position = '직책을 입력해주세요.';
     }
 
-    if (formData.hourly_wage <= 0) {
+    if (formData.salary_type === 'HOURLY' && formData.hourly_wage <= 0) {
       newErrors.hourly_wage = '시급을 입력해주세요.';
+    }
+
+    if (formData.salary_type === 'MONTHLY' && formData.monthly_salary <= 0) {
+      newErrors.monthly_salary = '월급을 입력해주세요.';
     }
 
     setErrors(newErrors);
@@ -314,34 +324,94 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSubmit, onCancel }) => {
             <div className="form-section">
               <h3 className="section-title">
                 <span className="section-icon">💰</span>
-                근무 정보
+                급여 정보
               </h3>
+
+              {/* Salary Type Selection */}
               <div className="form-row single">
                 <div className="modern-form-group">
-                  <label htmlFor="hourly_wage" className="modern-label">
-                    시급 <span className="required">*</span>
+                  <label htmlFor="salary_type" className="modern-label">
+                    급여 유형 <span className="required">*</span>
                   </label>
-                  <div className="input-wrapper">
+                  <div className="select-wrapper">
                     <svg className="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <line x1="12" y1="1" x2="12" y2="23"></line>
-                      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12,6 12,12 16,14"></polyline>
                     </svg>
-                    <input
-                      type="number"
-                      id="hourly_wage"
-                      name="hourly_wage"
-                      value={formData.hourly_wage}
+                    <select
+                      id="salary_type"
+                      name="salary_type"
+                      value={formData.salary_type}
                       onChange={handleChange}
-                      className={`modern-input ${errors.hourly_wage ? 'error' : ''}`}
-                      placeholder="시간당 급여"
-                      min="0"
-                      step="100"
-                    />
-                    <span className="input-suffix">원</span>
+                      className="modern-select"
+                    >
+                      <option value="HOURLY">시급제</option>
+                      <option value="MONTHLY">월급제</option>
+                    </select>
+                    <svg className="select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="6,9 12,15 18,9"></polyline>
+                    </svg>
                   </div>
-                  {errors.hourly_wage && <span className="modern-error">{errors.hourly_wage}</span>}
                 </div>
               </div>
+
+              {/* Salary Amount Fields */}
+              {formData.salary_type === 'HOURLY' ? (
+                <div className="form-row single">
+                  <div className="modern-form-group">
+                    <label htmlFor="hourly_wage" className="modern-label">
+                      시급 <span className="required">*</span>
+                    </label>
+                    <div className="input-wrapper">
+                      <svg className="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                      </svg>
+                      <input
+                        type="number"
+                        id="hourly_wage"
+                        name="hourly_wage"
+                        value={formData.hourly_wage}
+                        onChange={handleChange}
+                        className={`modern-input ${errors.hourly_wage ? 'error' : ''}`}
+                        placeholder="시간당 급여"
+                        min="0"
+                        step="100"
+                      />
+                      <span className="input-suffix">원</span>
+                    </div>
+                    {errors.hourly_wage && <span className="modern-error">{errors.hourly_wage}</span>}
+                  </div>
+                </div>
+              ) : (
+                <div className="form-row single">
+                  <div className="modern-form-group">
+                    <label htmlFor="monthly_salary" className="modern-label">
+                      월급 <span className="required">*</span>
+                    </label>
+                    <div className="input-wrapper">
+                      <svg className="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                      </svg>
+                      <input
+                        type="number"
+                        id="monthly_salary"
+                        name="monthly_salary"
+                        value={formData.monthly_salary}
+                        onChange={handleChange}
+                        className={`modern-input ${errors.monthly_salary ? 'error' : ''}`}
+                        placeholder="월 급여"
+                        min="0"
+                        step="10000"
+                      />
+                      <span className="input-suffix">원</span>
+                    </div>
+                    {errors.monthly_salary && <span className="modern-error">{errors.monthly_salary}</span>}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Settings */}

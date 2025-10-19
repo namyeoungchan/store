@@ -4,6 +4,11 @@
 import { getDatabase } from '../database/database';
 
 export const insertDummyData = () => {
+  // SQLite dummy data initialization disabled - using Supabase migration instead
+  console.log('Dummy data initialization disabled - using Supabase migration');
+  return;
+
+  /*
   const db = getDatabase();
 
   try {
@@ -180,10 +185,16 @@ export const insertDummyData = () => {
   } catch (error) {
     console.error('❌ 더미 데이터 추가 중 오류가 발생했습니다:', error);
   }
+  */
 };
 
 // 더미 데이터 삭제 함수 (필요 시 사용)
 export const clearDummyData = () => {
+  // SQLite dummy data clearing disabled - using Supabase migration instead
+  console.log('Dummy data clearing disabled - using Supabase migration');
+  return;
+
+  /*
   const db = getDatabase();
 
   try {
@@ -208,4 +219,5 @@ export const clearDummyData = () => {
   } catch (error) {
     console.error('❌ 더미 데이터 삭제 중 오류가 발생했습니다:', error);
   }
+  */
 };

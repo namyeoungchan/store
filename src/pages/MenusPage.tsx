@@ -23,7 +23,7 @@ export const MenusPage: React.FC = () => {
 
   // Recipe management states
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [recipes, setRecipes] = useState<{ [menuId: number]: RecipeWithDetails[] }>({});
+  const [recipes, setRecipes] = useState<{ [menuId: string]: RecipeWithDetails[] }>({});
   const [showRecipeModal, setShowRecipeModal] = useState(false);
   const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
   const [recipeForm, setRecipeForm] = useState({
@@ -54,14 +54,14 @@ export const MenusPage: React.FC = () => {
   const loadMenus = async () => {
     setLoading(true);
     try {
-      const data = MenuService.getAllMenus();
+      const data = await MenuService.getAllMenus();
       setMenus(data);
 
       // Load recipes for all menus
-      const newRecipes: { [menuId: number]: RecipeWithDetails[] } = {};
+      const newRecipes: { [menuId: string]: RecipeWithDetails[] } = {};
       for (const menu of data) {
         if (menu.id) {
-          newRecipes[menu.id] = MenuService.getRecipesByMenuId(menu.id);
+          newRecipes[menu.id] = await MenuService.getRecipesByMenuId(menu.id);
         }
       }
       setRecipes(newRecipes);
@@ -74,7 +74,7 @@ export const MenusPage: React.FC = () => {
 
   const loadIngredients = async () => {
     try {
-      const data = IngredientService.getAllIngredients();
+      const data = await IngredientService.getAllIngredients();
       setIngredients(data);
     } catch (err) {
       showToast('재료 목록을 불러오는데 실패했습니다.', 'error');
@@ -118,12 +118,12 @@ export const MenusPage: React.FC = () => {
     try {
       await RecipeService.addRecipe({
         menu_id: selectedMenu.id!,
-        ingredient_id: parseInt(recipeForm.ingredient_id),
+        ingredient_id: recipeForm.ingredient_id,
         quantity
       });
 
       // Refresh recipes for this menu
-      const updatedRecipes = MenuService.getRecipesByMenuId(selectedMenu.id!);
+      const updatedRecipes = await MenuService.getRecipesByMenuId(selectedMenu.id!);
       setRecipes(prev => ({
         ...prev,
         [selectedMenu.id!]: updatedRecipes
@@ -136,12 +136,12 @@ export const MenusPage: React.FC = () => {
     }
   };
 
-  const handleDeleteRecipe = async (recipeId: number, menuId: number) => {
+  const handleDeleteRecipe = async (recipeId: string, menuId: string) => {
     try {
-      RecipeService.deleteRecipe(recipeId);
+      await RecipeService.deleteRecipe(recipeId);
 
       // Refresh recipes for this menu
-      const updatedRecipes = MenuService.getRecipesByMenuId(menuId);
+      const updatedRecipes = await MenuService.getRecipesByMenuId(menuId);
       setRecipes(prev => ({
         ...prev,
         [menuId]: updatedRecipes

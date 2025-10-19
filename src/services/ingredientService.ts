@@ -1,106 +1,127 @@
-import { getDatabase } from '../database/database';
+import { supabase } from '../firebase/config';
 import { Ingredient } from '../types';
 
 export class IngredientService {
-  static getAllIngredients(): Ingredient[] {
-    const db = getDatabase();
-    const stmt = db.prepare('SELECT * FROM ingredients ORDER BY name');
-    const ingredients: Ingredient[] = [];
+  private static tableName = 'ingredients';
 
-    while (stmt.step()) {
-      const row = stmt.getAsObject();
-      ingredients.push({
-        id: row.id as number,
-        name: row.name as string,
-        unit: row.unit as string,
-        created_at: row.created_at as string
-      });
+  static async getAllIngredients(): Promise<Ingredient[]> {
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting all ingredients:', error);
+      return [];
     }
-
-    stmt.free();
-    return ingredients;
   }
 
-  static addIngredient(ingredient: Omit<Ingredient, 'id' | 'created_at'>): number {
-    const db = getDatabase();
-
+  static async addIngredient(ingredient: Omit<Ingredient, 'id' | 'created_at'>): Promise<string> {
     try {
-      const stmt = db.prepare(
-        'INSERT INTO ingredients (name, unit) VALUES (?, ?)'
-      );
-      stmt.run([ingredient.name, ingredient.unit]);
-      stmt.free();
+      // 중복 이름 체크
+      const { data: existingIngredients } = await supabase
+        .from(this.tableName)
+        .select('id')
+        .eq('name', ingredient.name);
 
-      // 방금 삽입된 행의 ID 반환
-      const lastIdStmt = db.prepare('SELECT last_insert_rowid() as id');
-      lastIdStmt.step();
-      const result = lastIdStmt.getAsObject();
-      lastIdStmt.free();
+      if (existingIngredients && existingIngredients.length > 0) {
+        throw new Error('이미 존재하는 재료명입니다.');
+      }
 
-      const ingredientId = result.id as number;
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .insert(ingredient)
+        .select()
+        .single();
+
+      if (error) throw error;
 
       // 재고 테이블에도 초기 데이터 삽입
-      this.initializeInventory(ingredientId);
+      await this.initializeInventory(data.id);
 
-      return ingredientId;
+      return data.id;
     } catch (error) {
-      if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
-        throw new Error('이미 존재하는 재료명입니다.');
-      }
+      console.error('Error adding ingredient:', error);
       throw error;
     }
   }
 
-  static updateIngredient(id: number, ingredient: Omit<Ingredient, 'id' | 'created_at'>): void {
-    const db = getDatabase();
-
+  static async updateIngredient(id: string, ingredient: Omit<Ingredient, 'id' | 'created_at'>): Promise<void> {
     try {
-      const stmt = db.prepare(
-        'UPDATE ingredients SET name = ?, unit = ? WHERE id = ?'
-      );
-      stmt.run([ingredient.name, ingredient.unit, id]);
-      stmt.free();
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+      // 중복 이름 체크 (자신 제외)
+      const { data: existingIngredients } = await supabase
+        .from(this.tableName)
+        .select('id')
+        .eq('name', ingredient.name)
+        .neq('id', id);
+
+      if (existingIngredients && existingIngredients.length > 0) {
         throw new Error('이미 존재하는 재료명입니다.');
       }
+
+      const { error } = await supabase
+        .from(this.tableName)
+        .update(ingredient)
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating ingredient:', error);
       throw error;
     }
   }
 
-  static deleteIngredient(id: number): void {
-    const db = getDatabase();
-    const stmt = db.prepare('DELETE FROM ingredients WHERE id = ?');
-    stmt.run([id]);
-    stmt.free();
-  }
+  static async deleteIngredient(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from(this.tableName)
+        .delete()
+        .eq('id', id);
 
-  static getIngredientById(id: number): Ingredient | null {
-    const db = getDatabase();
-    const stmt = db.prepare('SELECT * FROM ingredients WHERE id = ?');
-    stmt.bind([id]);
-
-    if (stmt.step()) {
-      const row = stmt.getAsObject();
-      stmt.free();
-      return {
-        id: row.id as number,
-        name: row.name as string,
-        unit: row.unit as string,
-        created_at: row.created_at as string
-      };
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting ingredient:', error);
+      throw error;
     }
-
-    stmt.free();
-    return null;
   }
 
-  private static initializeInventory(ingredientId: number): void {
-    const db = getDatabase();
-    const stmt = db.prepare(
-      'INSERT INTO inventory (ingredient_id, current_stock, min_stock) VALUES (?, 0, 0)'
-    );
-    stmt.run([ingredientId]);
-    stmt.free();
+  static async getIngredientById(id: string): Promise<Ingredient | null> {
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') return null;
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      console.error('Error getting ingredient by ID:', error);
+      return null;
+    }
   }
+
+  private static async initializeInventory(ingredientId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('inventory')
+        .insert({
+          ingredient_id: ingredientId,
+          current_stock: 0,
+          min_stock: 0
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error initializing inventory:', error);
+      throw error;
+    }
+  }
+
 }

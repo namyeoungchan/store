@@ -16,7 +16,7 @@ const LowStockAlert: React.FC<LowStockAlertProps> = ({ showAll = false }) => {
 
   const loadLowStockItems = async () => {
     try {
-      const allInventory = InventoryService.getAllInventoryWithDetails();
+      const allInventory = await InventoryService.getAllInventoryWithDetails();
       const lowStock = allInventory.filter((item: InventoryWithDetails) =>
         item.current_stock <= item.min_stock
       );

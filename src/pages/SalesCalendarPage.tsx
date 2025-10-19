@@ -44,8 +44,8 @@ const SalesCalendarPage: React.FC = () => {
       endDate.setDate(endDate.getDate() + (6 - lastDay.getDay())); // 주의 끝까지
 
       // 모든 주문 데이터 가져오기
-      const allOrders = OrderService.getAllOrders();
-      const depositSchedules = SalesService.getDepositSchedule();
+      const allOrders = await OrderService.getAllOrders();
+      const depositSchedules = await SalesService.getDepositSchedule();
 
       // 날짜별 데이터 그룹화
       const dayDataMap = new Map<string, CalendarDay>();

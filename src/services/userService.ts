@@ -1,72 +1,42 @@
-import { getDatabase, persistDatabase } from '../database/database';
-import { User, UserWithSchedule } from '../types';
+import { supabase } from '../firebase/config';
+import { User, UserWithSchedule, SalaryType } from '../types';
 import { PasswordUtils } from '../utils/passwordUtils';
 
 export class UserService {
-  private static getDb() {
-    return getDatabase();
-  }
+  private static tableName = 'users';
 
   static async getAllUsers(): Promise<User[]> {
-    const db = this.getDb();
-    const result = db.exec(`
-      SELECT * FROM users
-      ORDER BY created_at DESC
-    `);
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (result.length === 0) return [];
-
-    const [{ values }] = result;
-    return values.map(row => ({
-      id: row[0] as number,
-      username: row[1] as string,
-      email: row[2] as string,
-      full_name: row[3] as string,
-      phone: row[4] as string,
-      hire_date: row[5] as string,
-      position: row[6] as string,
-      hourly_wage: row[7] as number,
-      password_hash: row[8] as string,
-      password_temp: row[9] as string,
-      is_password_temp: Boolean(row[10]),
-      last_login: row[11] as string,
-      is_active: Boolean(row[12]),
-      created_at: row[13] as string,
-      updated_at: row[14] as string,
-    }));
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      return [];
+    }
   }
 
-  static async getUserById(id: number): Promise<User | null> {
-    const db = this.getDb();
-    const result = db.exec(`
-      SELECT * FROM users WHERE id = ?
-    `, [id]);
+  static async getUserById(id: string): Promise<User | null> {
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('id', id)
+        .single();
 
-    if (result.length === 0 || result[0].values.length === 0) return null;
-
-    const row = result[0].values[0];
-    return {
-      id: row[0] as number,
-      username: row[1] as string,
-      email: row[2] as string,
-      full_name: row[3] as string,
-      phone: row[4] as string,
-      hire_date: row[5] as string,
-      position: row[6] as string,
-      hourly_wage: row[7] as number,
-      password_hash: row[8] as string,
-      password_temp: row[9] as string,
-      is_password_temp: Boolean(row[10]),
-      last_login: row[11] as string,
-      is_active: Boolean(row[12]),
-      created_at: row[13] as string,
-      updated_at: row[14] as string,
-    };
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error getting user by ID:', error);
+      return null;
+    }
   }
 
   static async createUser(user: Omit<User, 'id' | 'created_at' | 'updated_at'>, generateLogin: boolean = true): Promise<User> {
-    const db = this.getDb();
-
     let passwordHash = null;
     let passwordTemp = null;
     let isPasswordTemp = false;
@@ -77,145 +47,127 @@ export class UserService {
       isPasswordTemp = true;
     }
 
-    const stmt = db.prepare(`
-      INSERT INTO users (username, email, full_name, phone, hire_date, position, hourly_wage, password_hash, password_temp, is_password_temp, is_active)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    const userData = {
+      ...user,
+      password_hash: passwordHash,
+      password_temp: passwordTemp,
+      is_password_temp: isPasswordTemp,
+      is_active: user.is_active ?? true,
+      hourly_wage: user.hourly_wage || 0,
+      monthly_salary: user.monthly_salary || 0,
+      salary_type: user.salary_type || 'HOURLY',
+    };
 
-    stmt.run([
-      user.username,
-      user.email,
-      user.full_name,
-      user.phone,
-      user.hire_date,
-      user.position,
-      user.hourly_wage,
-      passwordHash,
-      passwordTemp,
-      isPasswordTemp ? 1 : 0,
-      user.is_active ? 1 : 0
-    ]);
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .insert(userData)
+        .select()
+        .single();
 
-    const result = db.exec('SELECT last_insert_rowid()');
-    const userId = result[0].values[0][0] as number;
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('이미 존재하는 사용자입니다.');
+        }
+        throw error;
+      }
 
-    // 데이터베이스 변경사항 저장
-    persistDatabase();
-
-    return this.getUserById(userId) as Promise<User>;
+      const result = { ...data, password_temp: passwordTemp };
+      return result;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
   }
 
-  static async updateUser(id: number, updates: Partial<Omit<User, 'id' | 'created_at'>>): Promise<User | null> {
-    const db = this.getDb();
+  static async updateUser(id: string, updates: Partial<Omit<User, 'id' | 'created_at'>>): Promise<User | null> {
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
 
-    const fields = Object.keys(updates).filter(key => key !== 'id' && key !== 'created_at');
-    const setClause = fields.map(field => `${field} = ?`).join(', ');
-    const values: (string | number | null)[] = fields.map(field => {
-      const value = updates[field as keyof typeof updates];
-      if (field === 'is_active') {
-        return Boolean(value) ? 1 : 0;
-      }
-      if (typeof value === 'string' || typeof value === 'number') {
-        return value;
-      }
-      return null;
-    });
-
-    const stmt = db.prepare(`
-      UPDATE users
-      SET ${setClause}, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-
-    stmt.run([...values, id]);
-
-    // 데이터베이스 변경사항 저장
-    persistDatabase();
-
-    return this.getUserById(id);
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
   }
 
-  static async deleteUser(id: number): Promise<boolean> {
-    const db = this.getDb();
+  static async deleteUser(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from(this.tableName)
+        .delete()
+        .eq('id', id);
 
-    const stmt = db.prepare('DELETE FROM users WHERE id = ?');
-    stmt.run([id]);
-
-    // 데이터베이스 변경사항 저장
-    persistDatabase();
-
-    return true;
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
   }
 
   static async getUsersWithCurrentSchedule(): Promise<UserWithSchedule[]> {
-    const db = this.getDb();
+    try {
+      const currentWeekStart = this.getCurrentWeekStart();
+      const { data: users, error } = await supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('is_active', true);
 
-    const currentWeekStart = this.getCurrentWeekStart();
+      if (error) throw error;
+      const usersWithSchedule: UserWithSchedule[] = [];
 
-    const result = db.exec(`
-      SELECT
-        u.*,
-        ws.monday_start, ws.monday_end,
-        ws.tuesday_start, ws.tuesday_end,
-        ws.wednesday_start, ws.wednesday_end,
-        ws.thursday_start, ws.thursday_end,
-        ws.friday_start, ws.friday_end,
-        ws.saturday_start, ws.saturday_end,
-        ws.sunday_start, ws.sunday_end
-      FROM users u
-      LEFT JOIN work_schedules ws ON u.id = ws.user_id AND ws.week_start_date = ?
-      WHERE u.is_active = 1
-      ORDER BY u.full_name
-    `, [currentWeekStart]);
+      for (const user of users || []) {
+        const userWithSchedule = user as UserWithSchedule;
 
-    if (result.length === 0) return [];
+        // 현재 주 스케줄 조회
+        const { data: schedules } = await supabase
+          .from('work_schedules')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('week_start_date', currentWeekStart);
 
-    const users = result[0].values.map(row => {
-      const user: UserWithSchedule = {
-        id: row[0] as number,
-        username: row[1] as string,
-        email: row[2] as string,
-        full_name: row[3] as string,
-        phone: row[4] as string,
-        hire_date: row[5] as string,
-        position: row[6] as string,
-        hourly_wage: row[7] as number,
-        is_active: Boolean(row[8]),
-        created_at: row[9] as string,
-        updated_at: row[10] as string,
-      };
+        if (schedules && schedules.length > 0) {
+          const schedule = schedules[0];
+          userWithSchedule.current_schedule = {
+            user_id: user.id!,
+            week_start_date: currentWeekStart,
+            monday_start: schedule.monday_start,
+            monday_end: schedule.monday_end,
+            tuesday_start: schedule.tuesday_start,
+            tuesday_end: schedule.tuesday_end,
+            wednesday_start: schedule.wednesday_start,
+            wednesday_end: schedule.wednesday_end,
+            thursday_start: schedule.thursday_start,
+            thursday_end: schedule.thursday_end,
+            friday_start: schedule.friday_start,
+            friday_end: schedule.friday_end,
+            saturday_start: schedule.saturday_start,
+            saturday_end: schedule.saturday_end,
+            sunday_start: schedule.sunday_start,
+            sunday_end: schedule.sunday_end,
+          };
+        }
 
-      if (row[11]) {
-        user.current_schedule = {
-          user_id: user.id!,
-          week_start_date: currentWeekStart,
-          monday_start: row[11] as string,
-          monday_end: row[12] as string,
-          tuesday_start: row[13] as string,
-          tuesday_end: row[14] as string,
-          wednesday_start: row[15] as string,
-          wednesday_end: row[16] as string,
-          thursday_start: row[17] as string,
-          thursday_end: row[18] as string,
-          friday_start: row[19] as string,
-          friday_end: row[20] as string,
-          saturday_start: row[21] as string,
-          saturday_end: row[22] as string,
-          sunday_start: row[23] as string,
-          sunday_end: row[24] as string,
-        };
+        // 주간 근무 시간 계산
+        const weeklyHours = await this.getUserWeeklyHours(user.id!, currentWeekStart);
+        userWithSchedule.total_hours_this_week = weeklyHours.total_hours;
+        userWithSchedule.total_pay_this_week = weeklyHours.total_pay;
+
+        usersWithSchedule.push(userWithSchedule);
       }
 
-      return user;
-    });
-
-    for (const user of users) {
-      const weeklyHours = await this.getUserWeeklyHours(user.id!, currentWeekStart);
-      user.total_hours_this_week = weeklyHours.total_hours;
-      user.total_pay_this_week = weeklyHours.total_pay;
+      return usersWithSchedule.sort((a, b) => a.full_name.localeCompare(b.full_name));
+    } catch (error) {
+      console.error('Error getting users with current schedule:', error);
+      return [];
     }
-
-    return users;
   }
 
   private static getCurrentWeekStart(): string {
@@ -226,55 +178,45 @@ export class UserService {
     return monday.toISOString().split('T')[0];
   }
 
-  private static async getUserWeeklyHours(userId: number, weekStart: string): Promise<{total_hours: number, total_pay: number}> {
-    const db = this.getDb();
+  private static async getUserWeeklyHours(userId: string, weekStart: string): Promise<{total_hours: number, total_pay: number}> {
+    try {
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      const weekEndStr = weekEnd.toISOString().split('T')[0];
 
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 6);
-    const weekEndStr = weekEnd.toISOString().split('T')[0];
+      const { data: workRecords } = await supabase
+        .from('work_records')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('work_date', weekStart)
+        .lte('work_date', weekEndStr);
 
-    const result = db.exec(`
-      SELECT COALESCE(SUM(total_hours), 0) as total_hours, COALESCE(SUM(total_pay), 0) as total_pay
-      FROM work_records
-      WHERE user_id = ? AND work_date BETWEEN ? AND ?
-    `, [userId, weekStart, weekEndStr]);
+      const totalHours = (workRecords || []).reduce((sum, record) => sum + (record.total_hours || 0), 0);
+      const totalPay = (workRecords || []).reduce((sum, record) => sum + (record.total_pay || 0), 0);
 
-    if (result.length === 0) return { total_hours: 0, total_pay: 0 };
-
-    const row = result[0].values[0];
-    return {
-      total_hours: row[0] as number,
-      total_pay: row[1] as number
-    };
+      return { total_hours: totalHours, total_pay: totalPay };
+    } catch (error) {
+      console.error('Error getting user weekly hours:', error);
+      return { total_hours: 0, total_pay: 0 };
+    }
   }
 
   // 로그인 관련 메서드들
   static async getUserByEmail(email: string): Promise<User | null> {
-    const db = this.getDb();
-    const result = db.exec(`
-      SELECT * FROM users WHERE email = ? AND is_active = 1
-    `, [email]);
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('email', email)
+        .eq('is_active', true)
+        .single();
 
-    if (result.length === 0 || result[0].values.length === 0) return null;
-
-    const row = result[0].values[0];
-    return {
-      id: row[0] as number,
-      username: row[1] as string,
-      email: row[2] as string,
-      full_name: row[3] as string,
-      phone: row[4] as string,
-      hire_date: row[5] as string,
-      position: row[6] as string,
-      hourly_wage: row[7] as number,
-      password_hash: row[8] as string,
-      password_temp: row[9] as string,
-      is_password_temp: Boolean(row[10]),
-      last_login: row[11] as string,
-      is_active: Boolean(row[12]),
-      created_at: row[13] as string,
-      updated_at: row[14] as string,
-    };
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error getting user by email:', error);
+      return null;
+    }
   }
 
   static async authenticateUser(email: string, password: string): Promise<User | null> {
@@ -290,98 +232,101 @@ export class UserService {
     return user;
   }
 
-  static async updateLastLogin(userId: number): Promise<void> {
-    const db = this.getDb();
-    const stmt = db.prepare(`
-      UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?
-    `);
-    stmt.run([userId]);
+  static async updateLastLogin(userId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from(this.tableName)
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', userId);
 
-    // 데이터베이스 변경사항 저장
-    persistDatabase();
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating last login:', error);
+    }
   }
 
-  static async resetPassword(userId: number): Promise<string> {
-    const db = this.getDb();
+  static async resetPassword(userId: string): Promise<string> {
     const tempPassword = PasswordUtils.generateTempPassword();
     const passwordHash = await PasswordUtils.hashPassword(tempPassword);
 
-    const stmt = db.prepare(`
-      UPDATE users SET
-        password_hash = ?,
-        password_temp = ?,
-        is_password_temp = 1,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
+    try {
+      const { error } = await supabase
+        .from(this.tableName)
+        .update({
+          password_hash: passwordHash,
+          password_temp: tempPassword,
+          is_password_temp: true
+        })
+        .eq('id', userId);
 
-    stmt.run([passwordHash, tempPassword, userId]);
-
-    // 데이터베이스 변경사항 저장
-    persistDatabase();
-
-    return tempPassword;
+      if (error) throw error;
+      return tempPassword;
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      throw error;
+    }
   }
 
-  static async changePassword(userId: number, newPassword: string): Promise<boolean> {
+  static async changePassword(userId: string, newPassword: string): Promise<boolean> {
     const validation = PasswordUtils.validatePassword(newPassword);
     if (!validation.valid) {
       throw new Error(validation.errors.join(', '));
     }
 
-    const db = this.getDb();
     const passwordHash = await PasswordUtils.hashPassword(newPassword);
 
-    const stmt = db.prepare(`
-      UPDATE users SET
-        password_hash = ?,
-        password_temp = NULL,
-        is_password_temp = 0,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
+    try {
+      const { error } = await supabase
+        .from(this.tableName)
+        .update({
+          password_hash: passwordHash,
+          password_temp: null,
+          is_password_temp: false
+        })
+        .eq('id', userId);
 
-    stmt.run([passwordHash, userId]);
-
-    // 데이터베이스 변경사항 저장
-    persistDatabase();
-
-    return true;
-  }
-
-  static async toggleUserLoginAccess(userId: number, hasAccess: boolean): Promise<void> {
-    const db = this.getDb();
-
-    if (hasAccess) {
-      // 로그인 권한 부여 - 임시 비밀번호 생성
-      const tempPassword = PasswordUtils.generateTempPassword();
-      const passwordHash = await PasswordUtils.hashPassword(tempPassword);
-
-      const stmt = db.prepare(`
-        UPDATE users SET
-          password_hash = ?,
-          password_temp = ?,
-          is_password_temp = 1,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `);
-
-      stmt.run([passwordHash, tempPassword, userId]);
-    } else {
-      // 로그인 권한 제거
-      const stmt = db.prepare(`
-        UPDATE users SET
-          password_hash = NULL,
-          password_temp = NULL,
-          is_password_temp = 1,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `);
-
-      stmt.run([userId]);
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error changing password:', error);
+      throw error;
     }
-
-    // 데이터베이스 변경사항 저장
-    persistDatabase();
   }
+
+  static async toggleUserLoginAccess(userId: string, hasAccess: boolean): Promise<void> {
+    try {
+      if (hasAccess) {
+        // 로그인 권한 부여 - 임시 비밀번호 생성
+        const tempPassword = PasswordUtils.generateTempPassword();
+        const passwordHash = await PasswordUtils.hashPassword(tempPassword);
+
+        const { error } = await supabase
+          .from(this.tableName)
+          .update({
+            password_hash: passwordHash,
+            password_temp: tempPassword,
+            is_password_temp: true
+          })
+          .eq('id', userId);
+
+        if (error) throw error;
+      } else {
+        // 로그인 권한 제거
+        const { error } = await supabase
+          .from(this.tableName)
+          .update({
+            password_hash: null,
+            password_temp: null,
+            is_password_temp: true
+          })
+          .eq('id', userId);
+
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Error toggling user login access:', error);
+      throw error;
+    }
+  }
+
 }

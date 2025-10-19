@@ -36,10 +36,10 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
     }
   };
 
-  const handleScheduleSave = async (userId: number, scheduleData: Partial<WorkSchedule>) => {
+  const handleScheduleSave = async (userId: string | number, scheduleData: Partial<WorkSchedule>) => {
     try {
       await ScheduleService.createOrUpdateSchedule({
-        user_id: userId,
+        user_id: String(userId),
         week_start_date: selectedWeek,
         ...scheduleData
       });
@@ -51,9 +51,9 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
     }
   };
 
-  const handleScheduleDelete = async (userId: number) => {
+  const handleScheduleDelete = async (userId: string | number) => {
     try {
-      await ScheduleService.deleteSchedule(userId, selectedWeek);
+      await ScheduleService.deleteSchedule(String(userId), selectedWeek);
       await loadWeekSchedules();
       onScheduleUpdate();
     } catch (err) {
@@ -62,8 +62,8 @@ const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
     }
   };
 
-  const getUserSchedule = (userId: number): WorkSchedule | undefined => {
-    return weekSchedules.find(schedule => schedule.user_id === userId);
+  const getUserSchedule = (userId: string | number): WorkSchedule | undefined => {
+    return weekSchedules.find(schedule => Number(schedule.user_id) === Number(userId));
   };
 
   const formatWeekRange = (weekStart: string) => {

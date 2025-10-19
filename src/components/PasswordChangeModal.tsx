@@ -4,7 +4,7 @@ import { PasswordUtils } from '../utils/passwordUtils';
 
 interface PasswordChangeModalProps {
   isOpen: boolean;
-  userId: number;
+  userId: string;
   onClose: () => void;
   onSuccess: () => void;
 }

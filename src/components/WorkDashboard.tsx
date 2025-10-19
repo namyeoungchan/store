@@ -320,7 +320,7 @@ const WorkDashboard: React.FC = () => {
       {/* Password Change Modal */}
       <PasswordChangeModal
         isOpen={showPasswordModal}
-        userId={parseInt(currentUser?.id || '0')}
+        userId={currentUser?.id || '0'}
         onClose={() => setShowPasswordModal(false)}
         onSuccess={() => {
           // 성공 시 필요하면 추가 작업

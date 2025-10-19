@@ -4,7 +4,7 @@ import { RecipeWithDetails } from '../types';
 interface RecipeListProps {
   recipes: RecipeWithDetails[];
   onEdit: (recipe: RecipeWithDetails) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
   groupByMenu?: boolean;
 }
 
