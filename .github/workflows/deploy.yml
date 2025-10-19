@@ -31,14 +31,14 @@ jobs:
           echo "REACT_APP_SUPABASE_URL is set: $([[ -n "$REACT_APP_SUPABASE_URL" ]] && echo "YES" || echo "NO")"
           echo "REACT_APP_SUPABASE_ANON_KEY is set: $([[ -n "$REACT_APP_SUPABASE_ANON_KEY" ]] && echo "YES" || echo "NO")"
         env:
-          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
-          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
+          REACT_APP_SUPABASE_URL: https://kvgoiijgqcvebiugxlcq.supabase.co
+          REACT_APP_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2Z29paWpncWN2ZWJpdWd4bGNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA4NjY2MTEsImV4cCI6MjA3NjQ0MjYxMX0.m_UgIBNjQxAGQizkr1pvvaD9b98SO4xVq-G9zAZR2aM
 
       - name: Build
         run: npm run build
         env:
-          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
-          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
+          REACT_APP_SUPABASE_URL: https://kvgoiijgqcvebiugxlcq.supabase.co
+          REACT_APP_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2Z29paWpncWN2ZWJpdWd4bGNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA4NjY2MTEsImV4cCI6MjA3NjQ0MjYxMX0.m_UgIBNjQxAGQizkr1pvvaD9b98SO4xVq-G9zAZR2aM
           CI: false
 
       - name: Upload artifact
