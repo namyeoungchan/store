@@ -9,8 +9,19 @@ import Toast from '../components/Toast';
 
 export const MenusPage: React.FC = () => {
   const [menus, setMenus] = useState<Menu[]>([]);
+  const [filteredMenus, setFilteredMenus] = useState<Menu[]>([]);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // 검색 및 필터링 상태
+  const [searchTerm, setSearchTerm] = useState('');
+  const [priceFilter, setPriceFilter] = useState({ min: '', max: '' });
+  const [sortBy, setSortBy] = useState<'name' | 'price' | 'created_at'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  // 페이징 상태
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; menu: Menu | null }>({
     show: false,
     menu: null
@@ -43,6 +54,70 @@ export const MenusPage: React.FC = () => {
     loadIngredients();
   }, []);
 
+  // 검색 및 필터링 로직
+  useEffect(() => {
+    let filtered = [...menus];
+
+    // 검색어 필터링
+    if (searchTerm) {
+      filtered = filtered.filter(menu =>
+        menu.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (menu.description && menu.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    // 가격 필터링
+    if (priceFilter.min) {
+      const minPrice = parseFloat(priceFilter.min);
+      if (!isNaN(minPrice)) {
+        filtered = filtered.filter(menu => menu.price >= minPrice);
+      }
+    }
+    if (priceFilter.max) {
+      const maxPrice = parseFloat(priceFilter.max);
+      if (!isNaN(maxPrice)) {
+        filtered = filtered.filter(menu => menu.price <= maxPrice);
+      }
+    }
+
+    // 정렬
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case 'price':
+          comparison = a.price - b.price;
+          break;
+        case 'created_at':
+          comparison = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+          break;
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    setFilteredMenus(filtered);
+    setCurrentPage(1); // 필터링 시 첫 페이지로 이동
+  }, [menus, searchTerm, priceFilter, sortBy, sortOrder]);
+
+  // 페이징 계산
+  const totalPages = Math.ceil(filteredMenus.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentMenus = filteredMenus.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setPriceFilter({ min: '', max: '' });
+    setSortBy('name');
+    setSortOrder('asc');
+  };
+
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
   };
@@ -56,6 +131,7 @@ export const MenusPage: React.FC = () => {
     try {
       const data = await MenuService.getAllMenus();
       setMenus(data);
+      setFilteredMenus(data);
 
       // Load recipes for all menus
       const newRecipes: { [menuId: string]: RecipeWithDetails[] } = {};
@@ -233,14 +309,18 @@ export const MenusPage: React.FC = () => {
         </div>
         <div className="header-stats">
           <div className="stat-card">
+            <div className="stat-number">{filteredMenus.length}</div>
+            <div className="stat-label">표시된 메뉴</div>
+          </div>
+          <div className="stat-card">
             <div className="stat-number">{menus.length}</div>
-            <div className="stat-label">등록된 메뉴</div>
+            <div className="stat-label">전체 메뉴</div>
           </div>
           <div className="stat-card">
             <div className="stat-number">
-              ₩{menus.reduce((sum, menu) => sum + menu.price, 0).toLocaleString()}
+              ₩{filteredMenus.reduce((sum, menu) => sum + menu.price, 0).toLocaleString()}
             </div>
-            <div className="stat-label">총 메뉴 가격</div>
+            <div className="stat-label">필터된 메뉴 총 가격</div>
           </div>
         </div>
       </div>
@@ -321,7 +401,85 @@ export const MenusPage: React.FC = () => {
               <div className="section-header">
                 <h3>📋 메뉴 목록</h3>
                 <div className="section-info">
-                  총 {menus.length}개의 메뉴가 등록되어 있습니다
+                  총 {menus.length}개 중 {filteredMenus.length}개 표시
+                </div>
+              </div>
+
+              {/* 검색 및 필터 컨트롤 */}
+              <div className="filters-section">
+                <div className="search-bar">
+                  <input
+                    type="text"
+                    placeholder="메뉴명 또는 설명으로 검색..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="search-input"
+                  />
+                </div>
+
+                <div className="filter-controls">
+                  <div className="price-filter">
+                    <label>가격 범위:</label>
+                    <input
+                      type="number"
+                      placeholder="최소 가격"
+                      value={priceFilter.min}
+                      onChange={(e) => setPriceFilter({...priceFilter, min: e.target.value})}
+                      className="price-input"
+                    />
+                    <span>~</span>
+                    <input
+                      type="number"
+                      placeholder="최대 가격"
+                      value={priceFilter.max}
+                      onChange={(e) => setPriceFilter({...priceFilter, max: e.target.value})}
+                      className="price-input"
+                    />
+                  </div>
+
+                  <div className="sort-controls">
+                    <label>정렬:</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'name' | 'price' | 'created_at')}
+                      className="sort-select"
+                    >
+                      <option value="name">이름순</option>
+                      <option value="price">가격순</option>
+                      <option value="created_at">등록일순</option>
+                    </select>
+                    <button
+                      className={`sort-order-btn ${sortOrder === 'desc' ? 'desc' : 'asc'}`}
+                      onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                      title={sortOrder === 'asc' ? '내림차순으로 정렬' : '오름차순으로 정렬'}
+                    >
+                      {sortOrder === 'asc' ? '↑' : '↓'}
+                    </button>
+                  </div>
+
+                  <div className="items-per-page">
+                    <label>페이지당 항목:</label>
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="items-select"
+                    >
+                      <option value={5}>5개</option>
+                      <option value={10}>10개</option>
+                      <option value={20}>20개</option>
+                      <option value={50}>50개</option>
+                    </select>
+                  </div>
+
+                  <button
+                    className="btn btn-secondary btn-small clear-filters"
+                    onClick={clearFilters}
+                  >
+                    필터 초기화
+                  </button>
                 </div>
               </div>
 
@@ -331,16 +489,22 @@ export const MenusPage: React.FC = () => {
                 </div>
               )}
 
-              {menus.length === 0 ? (
+              {filteredMenus.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-icon">🍽️</div>
-                  <h4>등록된 메뉴가 없습니다</h4>
-                  <p>첫 번째 메뉴를 등록해보세요!</p>
+                  <h4>{menus.length === 0 ? '등록된 메뉴가 없습니다' : '검색 결과가 없습니다'}</h4>
+                  <p>{menus.length === 0 ? '첫 번째 메뉴를 등록해보세요!' : '다른 검색어나 필터를 시도해보세요.'}</p>
+                  {menus.length > 0 && (
+                    <button className="btn btn-secondary" onClick={clearFilters}>
+                      필터 초기화
+                    </button>
+                  )}
                 </div>
               ) : (
-                <div className="menu-grid">
-                  {menus.map(menu => (
-                    <div key={menu.id} className="menu-card">
+                <>
+                  <div className="menu-grid">
+                    {currentMenus.map(menu => (
+                      <div key={menu.id} className="menu-card">
                       <div className="menu-info">
                         <h4 className="menu-name">{menu.name}</h4>
                         {menu.description && (
@@ -402,7 +566,58 @@ export const MenusPage: React.FC = () => {
                       </div>
                     </div>
                   ))}
-                </div>
+                  </div>
+
+                  {/* 페이징 */}
+                  {totalPages > 1 && (
+                    <div className="pagination">
+                      <button
+                        className="pagination-btn"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      >
+                        이전
+                      </button>
+
+                      <div className="pagination-numbers">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum: number;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+
+                          return (
+                            <button
+                              key={pageNum}
+                              className={`pagination-number ${currentPage === pageNum ? 'active' : ''}`}
+                              onClick={() => handlePageChange(pageNum)}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <button
+                        className="pagination-btn"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      >
+                        다음
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="pagination-info">
+                    {filteredMenus.length}개 중 {startIndex + 1}-{Math.min(endIndex, filteredMenus.length)}번째 표시
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -973,6 +1188,189 @@ export const MenusPage: React.FC = () => {
           }
         }
 
+        /* 필터 섹션 스타일 */
+        .filters-section {
+          margin-bottom: 1.5rem;
+          padding: 1rem;
+          background: #f8f9fa;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .search-bar {
+          margin-bottom: 1rem;
+        }
+
+        .search-input {
+          width: 100%;
+          padding: 0.75rem;
+          border: 2px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+          outline: none;
+          border-color: #ff9800;
+          box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.1);
+        }
+
+        .filter-controls {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 1rem;
+          align-items: center;
+        }
+
+        .price-filter {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .price-filter label {
+          font-weight: 600;
+          color: #2d3748;
+          font-size: 0.9rem;
+          white-space: nowrap;
+        }
+
+        .price-input {
+          width: 100px;
+          padding: 0.5rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          font-size: 0.8rem;
+        }
+
+        .sort-controls {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .sort-controls label {
+          font-weight: 600;
+          color: #2d3748;
+          font-size: 0.9rem;
+          white-space: nowrap;
+        }
+
+        .sort-select, .items-select {
+          padding: 0.5rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          font-size: 0.8rem;
+          background: white;
+        }
+
+        .sort-order-btn {
+          padding: 0.5rem;
+          background: #e2e8f0;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 0.9rem;
+          transition: background-color 0.2s;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .sort-order-btn:hover {
+          background: #cbd5e0;
+        }
+
+        .sort-order-btn.desc {
+          background: #ff9800;
+          color: white;
+        }
+
+        .items-per-page {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .items-per-page label {
+          font-weight: 600;
+          color: #2d3748;
+          font-size: 0.9rem;
+          white-space: nowrap;
+        }
+
+        .clear-filters {
+          margin-left: auto;
+        }
+
+        /* 페이징 스타일 */
+        .pagination {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 0.5rem;
+          margin: 2rem 0 1rem 0;
+          padding: 1rem;
+          border-top: 1px solid #e2e8f0;
+        }
+
+        .pagination-btn {
+          padding: 0.5rem 1rem;
+          background: #e2e8f0;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 0.9rem;
+          transition: all 0.2s;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+          background: #cbd5e0;
+        }
+
+        .pagination-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .pagination-numbers {
+          display: flex;
+          gap: 0.25rem;
+        }
+
+        .pagination-number {
+          padding: 0.5rem 0.75rem;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 0.9rem;
+          transition: all 0.2s;
+          min-width: 40px;
+          text-align: center;
+        }
+
+        .pagination-number:hover {
+          background: #f7fafc;
+          border-color: #ff9800;
+        }
+
+        .pagination-number.active {
+          background: #ff9800;
+          color: white;
+          border-color: #ff9800;
+        }
+
+        .pagination-info {
+          text-align: center;
+          color: #718096;
+          font-size: 0.9rem;
+          margin-top: 0.5rem;
+        }
+
         @media (max-width: 768px) {
           .menus-page {
             padding: 1rem;
@@ -999,6 +1397,25 @@ export const MenusPage: React.FC = () => {
 
           .menu-actions {
             flex-direction: column;
+          }
+
+          .filter-controls {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .clear-filters {
+            margin-left: 0;
+            align-self: center;
+          }
+
+          .pagination {
+            flex-wrap: wrap;
+          }
+
+          .pagination-numbers {
+            flex-wrap: wrap;
+            justify-content: center;
           }
         }
       `}</style>
