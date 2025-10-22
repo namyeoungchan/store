@@ -199,26 +199,26 @@ function App() {
       <div className="App">
         <nav className="app-nav">
           <div className="nav-header">
-            <div className="brand">
-              <div className="brand-icon">🏪</div>
+            <div className=" brand flex-div left">
               <div className="brand-content">
                 <h1 className="brand-title">매장 관리 시스템</h1>
                 <p className="brand-subtitle">Store Management</p>
               </div>
             </div>
-            <button
-              className="back-to-select-btn"
-              onClick={() => setAppMode('select')}
-              title="시스템 선택으로 돌아가기"
-            >
-              🔙
-            </button>
+            <div className="button-area flex-div right">
+              <button
+                  className="back-to-select-btn"
+                  onClick={() => setAppMode('select')}
+                  title="시스템 선택으로 돌아가기"
+              >🔙
+              </button>
+            </div>
           </div>
           <div className="nav-menu">
             <div className="menu-section">
               <div className="menu-label">대시보드</div>
               <button
-                className={`nav-item ${currentPage === 'dashboard' ? 'active' : ''}`}
+                  className={`nav-item ${currentPage === 'dashboard' ? 'active' : ''}`}
                 onClick={() => setCurrentPage('dashboard')}
               >
                 <span className="nav-icon">📊</span>

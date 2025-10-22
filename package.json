@@ -34,8 +34,6 @@
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build"
   },
-
-
   "eslintConfig": {
     "extends": [
       "react-app",
@@ -56,6 +54,7 @@
   },
   "devDependencies": {
     "@craco/craco": "^7.1.0",
-    "gh-pages": "^6.3.0"
+    "gh-pages": "^6.3.0",
+    "sass": "^1.93.2"
   }
 }

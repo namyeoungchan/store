@@ -49,7 +49,6 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
           <div className="login-header">
             <div className="login-icon">🔐</div>
             <h1>관리자 로그인</h1>
-            <p>Store Inventory Management System</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
@@ -58,7 +57,6 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
                 관리자 ID
               </label>
               <div className="input-wrapper">
-                <span className="input-icon">👤</span>
                 <input
                   id="username"
                   type="text"
@@ -77,7 +75,6 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
                 비밀번호
               </label>
               <div className="input-wrapper">
-                <span className="input-icon">🔑</span>
                 <input
                   id="password"
                   type="password"

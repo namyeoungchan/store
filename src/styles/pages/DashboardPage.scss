@@ -1,0 +1,657 @@
+
+.modern-dashboard {
+  padding: var(--space-8);
+  max-width: 1400px;
+  margin: 0 auto;
+  background: var(--gray-50);
+  min-height: 100vh;
+}
+
+.dashboard-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: var(--gray-600);
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-8);
+  padding: var(--space-8);
+  background: white;
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-200);
+}
+
+.header-content h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--space-2);
+}
+
+.header-content p {
+  color: var(--gray-600);
+  font-size: 1.1rem;
+}
+
+.refresh-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--primary-600);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.refresh-button:hover {
+  background: var(--primary-700);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.stat-card {
+  background: white;
+  padding: var(--space-6);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-200);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+.stat-card.revenue::before {
+  background: linear-gradient(90deg, var(--success-500), var(--success-600));
+}
+
+.stat-card.orders::before {
+  background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
+}
+
+.stat-card.pending::before {
+  background: linear-gradient(90deg, var(--warning-500), var(--warning-600));
+}
+
+.stat-card.alerts::before {
+  background: linear-gradient(90deg, var(--error-500), var(--error-600));
+}
+
+.stat-icon {
+  font-size: 2.5rem;
+  opacity: 0.8;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--space-1);
+}
+
+.stat-label {
+  color: var(--gray-600);
+  font-size: 0.875rem;
+  margin-bottom: var(--space-1);
+}
+
+.stat-change {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.stat-change.positive {
+  background: var(--success-50);
+  color: var(--success-600);
+}
+
+.stat-change.negative {
+  background: var(--error-50);
+  color: var(--error-600);
+}
+
+.stat-change.neutral {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: var(--space-6);
+}
+
+.dashboard-card {
+  background: white;
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-200);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+}
+
+.dashboard-card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.card-header {
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--gray-50);
+}
+
+.card-header h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin: 0;
+}
+
+.card-badge {
+  padding: var(--space-1) var(--space-3);
+  background: var(--primary-100);
+  color: var(--primary-700);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.card-badge.warning {
+  background: var(--warning-100);
+  color: var(--warning-700);
+}
+
+.card-badge.success {
+  background: var(--success-100);
+  color: var(--success-700);
+}
+
+.view-all-btn {
+  background: none;
+  border: none;
+  color: var(--primary-600);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.view-all-btn:hover {
+  background: var(--primary-50);
+}
+
+.card-content {
+  padding: var(--space-6);
+}
+
+.sales-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.metric {
+  text-align: center;
+  padding: var(--space-4);
+  background: var(--gray-50);
+  border-radius: var(--radius-lg);
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  margin-bottom: var(--space-1);
+}
+
+.metric-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.payment-breakdown h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-4);
+}
+
+.payment-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.payment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3);
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+}
+
+.payment-type {
+  font-size: 0.875rem;
+  color: var(--gray-700);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.payment-amount {
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--space-8);
+  color: var(--gray-500);
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+}
+
+.alert-list,
+.order-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.alert-item,
+.order-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4);
+  background: var(--gray-50);
+  border-radius: var(--radius-lg);
+  border-left: 4px solid var(--error-500);
+}
+
+.order-item {
+  border-left-color: var(--primary-500);
+}
+
+.alert-info,
+.order-info {
+  flex: 1;
+}
+
+.alert-name,
+.order-id {
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-1);
+}
+
+.alert-details,
+.order-details {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.alert-status,
+.order-status {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.alert-status.critical {
+  background: var(--error-100);
+  color: var(--error-700);
+}
+
+.order-status.completed {
+  background: var(--success-100);
+  color: var(--success-700);
+}
+
+.order-status.pending {
+  background: var(--warning-100);
+  color: var(--warning-700);
+}
+
+.order-amount {
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-right: var(--space-4);
+}
+
+.more-alerts {
+  text-align: center;
+  padding: var(--space-3);
+  color: var(--gray-500);
+  font-size: 0.875rem;
+  background: var(--gray-100);
+  border-radius: var(--radius-md);
+}
+
+.system-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.system-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--gray-50);
+  border-radius: var(--radius-lg);
+}
+
+.stat-icon-sm {
+  font-size: 1.5rem;
+}
+
+.stat-number {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.stat-text {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+/* Dashboard Deposit Widget Styles - Complete redesign for dashboard integration */
+.dashboard-deposit-widget {
+  background: white;
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-200);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+}
+
+.dashboard-deposit-widget:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.dashboard-deposit-widget .widget-header {
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--gray-200);
+  background: var(--gray-50);
+  margin-bottom: 0;
+}
+
+.dashboard-deposit-widget .header-title {
+  margin-bottom: var(--space-2);
+}
+
+.dashboard-deposit-widget .title-icon {
+  font-size: 1.125rem;
+}
+
+.dashboard-deposit-widget .title-text {
+  color: var(--gray-900);
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.dashboard-deposit-widget .total-amount {
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
+.dashboard-deposit-widget .amount-label {
+  color: var(--gray-600);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.dashboard-deposit-widget .amount-value {
+  color: var(--success-600);
+  -webkit-text-fill-color: var(--success-600);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.dashboard-deposit-widget .schedule-list {
+  padding: var(--space-6);
+  max-height: 350px;
+  gap: var(--space-3);
+}
+
+.dashboard-deposit-widget .schedule-item {
+  background: var(--gray-50);
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  transition: all var(--transition-fast);
+}
+
+.dashboard-deposit-widget .schedule-item:hover {
+  background: var(--gray-100);
+  border-color: var(--primary-400);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.dashboard-deposit-widget .schedule-item.active {
+  background: var(--primary-50);
+  border-color: var(--primary-500);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+}
+
+.dashboard-deposit-widget .date-text {
+  color: var(--gray-900);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.dashboard-deposit-widget .date-full {
+  color: var(--gray-500);
+  font-size: 0.75rem;
+}
+
+.dashboard-deposit-widget .schedule-amount {
+  color: var(--success-600);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.dashboard-deposit-widget .schedule-count {
+  background: white;
+  color: var(--gray-600);
+  border: 1px solid var(--gray-200);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.dashboard-deposit-widget .expand-icon {
+  color: var(--gray-500);
+  font-size: 0.875rem;
+}
+
+.dashboard-deposit-widget .schedule-details {
+  margin: 0;
+  background: linear-gradient(135deg, var(--primary-50), var(--blue-50));
+  border: 1px solid var(--primary-200);
+  border-radius: 0;
+  padding: var(--space-6);
+  border-top: 1px solid var(--gray-200);
+}
+
+.dashboard-deposit-widget .details-header h4 {
+  color: var(--primary-700);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.dashboard-deposit-widget .deposit-complete-btn {
+  background: linear-gradient(135deg, var(--success-500), var(--success-600));
+  font-size: 0.75rem;
+  padding: var(--space-2) var(--space-3);
+}
+
+.dashboard-deposit-widget .close-btn {
+  padding: var(--space-2);
+  font-size: 1rem;
+}
+
+.dashboard-deposit-widget .order-item {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+.dashboard-deposit-widget .loading-state,
+.dashboard-deposit-widget .empty-state {
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--gray-500);
+}
+
+.dashboard-deposit-widget .empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-4);
+  opacity: 0.6;
+}
+
+.dashboard-deposit-widget .loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--gray-200);
+  border-top: 2px solid var(--primary-500);
+  margin-bottom: var(--space-4);
+}
+
+@media (max-width: 768px) {
+  .modern-dashboard {
+    padding: var(--space-4);
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    gap: var(--space-4);
+    text-align: center;
+  }
+
+  .quick-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sales-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .system-stats {
+    grid-template-columns: 1fr;
+  }
+
+  /* Mobile styles for deposit widget */
+  .dashboard-deposit-widget .widget-header {
+    padding: var(--space-4);
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: stretch;
+  }
+
+  .dashboard-deposit-widget .total-amount {
+    align-items: center;
+  }
+
+  .dashboard-deposit-widget .schedule-list {
+    padding: var(--space-4);
+    max-height: 300px;
+  }
+
+  .dashboard-deposit-widget .schedule-item {
+    grid-template-columns: 1fr auto;
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+
+  .dashboard-deposit-widget .schedule-count,
+  .dashboard-deposit-widget .expand-icon {
+    display: none;
+  }
+
+  .dashboard-deposit-widget .schedule-details {
+    padding: var(--space-4);
+  }
+
+  .dashboard-deposit-widget .details-title {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+
+  .dashboard-deposit-widget .details-actions {
+    justify-content: center;
+  }
+
+  .dashboard-deposit-widget .order-item {
+    grid-template-columns: 1fr auto;
+    gap: var(--space-2);
+  }
+
+  .dashboard-deposit-widget .order-time {
+    display: none;
+  }
+}

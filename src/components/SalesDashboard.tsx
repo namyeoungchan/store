@@ -152,7 +152,6 @@ const SalesDashboard: React.FC = () => {
           <div className="card">
             <div className="card-header">
               <h2 className="card-title">
-                <span className="title-icon">🏪</span>
                 결제 유형별 매출
               </h2>
             </div>

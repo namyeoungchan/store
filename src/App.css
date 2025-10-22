@@ -112,14 +112,16 @@ body {
 }
 
 .nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: var(--space-8);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(0, 0, 0, 0.2);
 }
 
 .brand {
-  display: flex;
-  align-items: center;
+  width: auto;
   gap: var(--space-4);
 }
 
