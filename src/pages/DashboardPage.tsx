@@ -9,6 +9,7 @@ import '@Style/pages/DashboardPage.scss';
 
 import { SalesAnalytics, InventoryWithDetails, Order } from '../types';
 import { DepositScheduleWidget } from '../components/DepositScheduleWidget';
+import { SalaryWidget } from '../components/SalaryWidget';
 
 const DashboardPage: React.FC = () => {
   const [salesAnalytics, setSalesAnalytics] = useState<SalesAnalytics | null>(null);
@@ -228,6 +229,12 @@ const DashboardPage: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Salary Widget */}
+        <SalaryWidget
+          className="dashboard-salary-widget"
+          onRefresh={loadDashboardData}
+        />
 
         {/* Deposit Schedule */}
         <DepositScheduleWidget
