@@ -1,7 +1,6 @@
-import { FirestoreService } from '../firebase/firestoreService';
+import { FirestoreService } from '../database/database';
 import { User, UserWithSchedule, SalaryType } from '../types';
 import { PasswordUtils } from '../utils/passwordUtils';
-import { where, orderBy } from 'firebase/firestore';
 
 export class FirestoreUserService {
   private static collectionName = FirestoreService.collections.users;
@@ -50,7 +49,6 @@ export class FirestoreUserService {
   }
 
   static async updateUser(id: string, updates: Partial<Omit<User, 'id' | 'created_at'>>): Promise<User | null> {
-    // Firestore에서는 undefined 값을 허용하지 않으므로 필터링
     const cleanUpdates = Object.fromEntries(
       Object.entries(updates).filter(([_, value]) => value !== undefined)
     );
@@ -69,12 +67,10 @@ export class FirestoreUserService {
     const users = await this.getAllUsers();
     const activeUsers = users.filter(user => user.is_active);
 
-    // 각 유저별로 현재 주 스케줄 조회
     const usersWithSchedule = await Promise.all(
       activeUsers.map(async (user) => {
         const userWithSchedule: UserWithSchedule = { ...user };
 
-        // 현재 주 스케줄 조회
         const schedules = await FirestoreService.getWhere(
           FirestoreService.collections.workSchedules,
           'user_id',
@@ -104,7 +100,6 @@ export class FirestoreUserService {
           };
         }
 
-        // 주간 근무 시간 계산
         const weeklyHours = await this.getUserWeeklyHours(String(user.id!), currentWeekStart);
         userWithSchedule.total_hours_this_week = weeklyHours.total_hours;
         userWithSchedule.total_pay_this_week = weeklyHours.total_pay;
@@ -144,7 +139,6 @@ export class FirestoreUserService {
     return { total_hours: totalHours, total_pay: totalPay };
   }
 
-  // 로그인 관련 메서드들
   static async getUserByEmail(email: string): Promise<User | null> {
     const users = await FirestoreService.getWithMultipleWhere(this.collectionName, [
       { field: 'email', operator: '==', value: email },
@@ -162,9 +156,7 @@ export class FirestoreUserService {
     const isValid = await PasswordUtils.verifyPassword(password, user.password_hash);
     if (!isValid) return null;
 
-    // 로그인 시간 업데이트
     await this.updateLastLogin(String(user.id!));
-
     return user;
   }
 
@@ -206,7 +198,6 @@ export class FirestoreUserService {
 
   static async toggleUserLoginAccess(userId: string, hasAccess: boolean): Promise<void> {
     if (hasAccess) {
-      // 로그인 권한 부여 - 임시 비밀번호 생성
       const tempPassword = PasswordUtils.generateTempPassword();
       const passwordHash = await PasswordUtils.hashPassword(tempPassword);
 
@@ -216,7 +207,6 @@ export class FirestoreUserService {
         is_password_temp: true
       });
     } else {
-      // 로그인 권한 제거
       await FirestoreService.update(this.collectionName, userId, {
         password_hash: null,
         password_temp: null,
@@ -225,7 +215,6 @@ export class FirestoreUserService {
     }
   }
 
-  // Firestore 데이터를 User 타입으로 변환
   private static mapFirestoreToUser(data: any): User {
     return {
       id: data.id,

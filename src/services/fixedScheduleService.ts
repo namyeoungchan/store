@@ -1,33 +1,18 @@
-import { db } from '../firebase/config';
+import { FirestoreService } from '../database/database';
 import { FixedSchedule, FixedScheduleWithUser } from '../types';
 
 export class FixedScheduleService {
+  private static collectionName = FirestoreService.collections.fixedSchedules;
+
   static async createFixedSchedule(scheduleData: Omit<FixedSchedule, 'id' | 'created_at' | 'updated_at'>): Promise<FixedSchedule> {
-    const insertData = {
-      ...scheduleData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    const { data, error } = await db
-      .from('fixed_schedules')
-      .insert(insertData)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    const id = await FirestoreService.create(this.collectionName, scheduleData);
+    const created = await FirestoreService.getById(this.collectionName, id);
+    return created as FixedSchedule;
   }
 
   static async getFixedSchedulesByUser(userId: string): Promise<FixedSchedule[]> {
-    const { data, error } = await db
-      .from('fixed_schedules')
-      .select('*')
-      .eq('user_id', userId)
-      .order('effective_from', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
+    const data = await FirestoreService.getWhere(this.collectionName, 'user_id', '==', userId);
+    return data.sort((a, b) => (b.effective_from || '').localeCompare(a.effective_from || '')) as FixedSchedule[];
   }
 
   static async getAllFixedSchedules(): Promise<FixedScheduleWithUser[]> {
@@ -35,90 +20,59 @@ export class FixedScheduleService {
   }
 
   static async getAllFixedSchedulesWithUsers(): Promise<FixedScheduleWithUser[]> {
-    const { data, error } = await db
-      .from('fixed_schedules')
-      .select(`
-        *,
-        users:user_id (
-          full_name,
-          position
-        )
-      `)
-      .order('effective_from', { ascending: false });
+    const schedules = await FirestoreService.getOrderedBy(this.collectionName, 'effective_from', 'desc');
 
-    if (error) throw error;
+    const schedulesWithUsers: FixedScheduleWithUser[] = [];
 
-    return (data || []).map(schedule => ({
-      ...schedule,
-      user_name: schedule.users?.full_name || '',
-      user_position: schedule.users?.position || ''
-    }));
+    for (const schedule of schedules) {
+      const user = await FirestoreService.getById(FirestoreService.collections.users, schedule.user_id);
+      schedulesWithUsers.push({
+        ...schedule,
+        user_name: user?.full_name || '',
+        user_position: user?.position || ''
+      });
+    }
+
+    return schedulesWithUsers;
   }
 
   static async getActiveFixedScheduleByUser(userId: string): Promise<FixedSchedule | null> {
-    const { data, error } = await db
-      .from('fixed_schedules')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .lte('effective_from', new Date().toISOString())
-      .or(`effective_until.is.null,effective_until.gte.${new Date().toISOString()}`)
-      .order('effective_from', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const now = new Date().toISOString();
+    const schedules = await FirestoreService.getWhere(this.collectionName, 'user_id', '==', userId);
 
-    if (error) throw error;
-    return data;
+    const activeSchedules = schedules
+      .filter(s =>
+        s.is_active === true &&
+        s.effective_from <= now &&
+        (s.effective_until === null || s.effective_until === undefined || s.effective_until >= now)
+      )
+      .sort((a, b) => (b.effective_from || '').localeCompare(a.effective_from || ''));
+
+    return activeSchedules.length > 0 ? activeSchedules[0] as FixedSchedule : null;
   }
 
   static async updateFixedSchedule(id: string, updateData: Partial<FixedSchedule>): Promise<void> {
-    const { error } = await db
-      .from('fixed_schedules')
-      .update({
-        ...updateData,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id);
-
-    if (error) throw error;
+    await FirestoreService.update(this.collectionName, id, updateData);
   }
 
   static async deleteFixedSchedule(id: string): Promise<void> {
-    const { error } = await db
-      .from('fixed_schedules')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    await FirestoreService.delete(this.collectionName, id);
   }
 
   static async deactivateFixedSchedule(id: string, effectiveUntil: string): Promise<void> {
-    // Get the original schedule
-    const { data: originalSchedule, error: fetchError } = await db
-      .from('fixed_schedules')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (fetchError) throw fetchError;
+    const originalSchedule = await FirestoreService.getById(this.collectionName, id);
     if (!originalSchedule) throw new Error('Fixed schedule not found');
 
-    // Update the current schedule to set effective_until
-    const { error: updateError } = await db
-      .from('fixed_schedules')
-      .update({
-        effective_until: effectiveUntil,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id);
+    // 현재 스케줄에 effective_until 설정
+    await FirestoreService.update(this.collectionName, id, {
+      effective_until: effectiveUntil
+    });
 
-    if (updateError) throw updateError;
-
-    // Create a new inactive schedule starting from the effective_until date
+    // 비활성 스케줄 생성
     const nextDay = new Date(effectiveUntil);
     nextDay.setDate(nextDay.getDate() + 1);
 
-    const newScheduleData = {
+    await FirestoreService.create(this.collectionName, {
       user_id: originalSchedule.user_id,
       name: `${originalSchedule.name} (비활성화됨)`,
       description: originalSchedule.description,
@@ -138,40 +92,29 @@ export class FixedScheduleService {
       sunday_end: null,
       is_active: false,
       effective_from: nextDay.toISOString().split('T')[0],
-      effective_until: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    const { error: insertError } = await db
-      .from('fixed_schedules')
-      .insert(newScheduleData);
-
-    if (insertError) throw insertError;
+      effective_until: null
+    });
   }
 
   static async applyFixedScheduleToWeek(fixedScheduleId: string, weekStartDate: string): Promise<void> {
-    // Get the fixed schedule
-    const { data: fixedSchedule, error: fetchError } = await db
-      .from('fixed_schedules')
-      .select('*')
-      .eq('id', fixedScheduleId)
-      .single();
-
-    if (fetchError) throw fetchError;
+    const fixedSchedule = await FirestoreService.getById(this.collectionName, fixedScheduleId);
     if (!fixedSchedule) throw new Error('Fixed schedule not found');
 
-    // Delete existing schedule for this week
-    const { error: deleteError } = await db
-      .from('work_schedules')
-      .delete()
-      .eq('user_id', fixedSchedule.user_id)
-      .eq('week_start_date', weekStartDate);
+    // 해당 주의 기존 스케줄 삭제
+    const existingSchedules = await FirestoreService.getWithMultipleWhere(
+      FirestoreService.collections.workSchedules,
+      [
+        { field: 'user_id', operator: '==', value: fixedSchedule.user_id },
+        { field: 'week_start_date', operator: '==', value: weekStartDate }
+      ]
+    );
 
-    if (deleteError) throw deleteError;
+    for (const existing of existingSchedules) {
+      await FirestoreService.delete(FirestoreService.collections.workSchedules, existing.id);
+    }
 
-    // Insert new schedule based on fixed schedule
-    const newScheduleData = {
+    // 고정 스케줄 기반으로 새 스케줄 생성
+    await FirestoreService.create(FirestoreService.collections.workSchedules, {
       user_id: fixedSchedule.user_id,
       week_start_date: weekStartDate,
       monday_start: fixedSchedule.monday_start,
@@ -187,55 +130,33 @@ export class FixedScheduleService {
       saturday_start: fixedSchedule.saturday_start,
       saturday_end: fixedSchedule.saturday_end,
       sunday_start: fixedSchedule.sunday_start,
-      sunday_end: fixedSchedule.sunday_end,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    const { error: insertError } = await db
-      .from('work_schedules')
-      .insert(newScheduleData);
-
-    if (insertError) throw insertError;
+      sunday_end: fixedSchedule.sunday_end
+    });
   }
 
   static async getFixedScheduleById(id: string): Promise<FixedSchedule | null> {
-    const { data, error } = await db
-      .from('fixed_schedules')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-
-    if (error) throw error;
-    return data;
+    const data = await FirestoreService.getById(this.collectionName, id);
+    return data as FixedSchedule | null;
   }
 
   static async activateFixedSchedule(id: string): Promise<void> {
-    const { error } = await db
-      .from('fixed_schedules')
-      .update({
-        is_active: true,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id);
-
-    if (error) throw error;
+    await FirestoreService.update(this.collectionName, id, {
+      is_active: true
+    });
   }
 
   static async cloneFixedSchedule(id: string, newData: Partial<FixedSchedule>): Promise<FixedSchedule> {
-    // Get the original schedule
     const original = await this.getFixedScheduleById(id);
     if (!original) throw new Error('Original schedule not found');
 
-    // Create new schedule with data from original and override with newData
     const cloneData = {
       ...original,
       ...newData,
-      id: undefined, // Remove ID so it creates a new one
+      id: undefined,
       created_at: undefined,
       updated_at: undefined
     };
 
-    return this.createFixedSchedule(cloneData);
+    return this.createFixedSchedule(cloneData as any);
   }
 }

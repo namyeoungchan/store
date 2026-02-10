@@ -1,23 +1,18 @@
-import { supabase } from '../firebase/config';
+import { FirestoreService } from '../database/database';
 import { WorkSchedule } from '../types';
 
 export class ScheduleService {
-  private static tableName = 'work_schedules';
+  private static collectionName = FirestoreService.collections.workSchedules;
 
   static async getScheduleByUserAndWeek(userId: string, weekStartDate: string): Promise<WorkSchedule | null> {
     try {
-      const { data, error } = await supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('user_id', userId)
-        .eq('week_start_date', weekStartDate)
-        .single();
+      const schedules = await FirestoreService.getWithMultipleWhere(this.collectionName, [
+        { field: 'user_id', operator: '==', value: userId },
+        { field: 'week_start_date', operator: '==', value: weekStartDate }
+      ]);
 
-      if (error) {
-        if (error.code === 'PGRST116') return null;
-        throw error;
-      }
-      return data;
+      if (schedules.length === 0) return null;
+      return schedules[0] as WorkSchedule;
     } catch (error) {
       console.error('Error getting schedule by user and week:', error);
       return null;
@@ -48,24 +43,13 @@ export class ScheduleService {
       };
 
       if (existing) {
-        const { data, error } = await supabase
-          .from(this.tableName)
-          .update(scheduleData)
-          .eq('id', existing.id!)
-          .select()
-          .single();
-
-        if (error) throw error;
-        return data;
+        await FirestoreService.update(this.collectionName, existing.id!, scheduleData);
+        const updated = await FirestoreService.getById(this.collectionName, existing.id!);
+        return updated as WorkSchedule;
       } else {
-        const { data, error } = await supabase
-          .from(this.tableName)
-          .insert(scheduleData)
-          .select()
-          .single();
-
-        if (error) throw error;
-        return data;
+        const id = await FirestoreService.create(this.collectionName, scheduleData);
+        const created = await FirestoreService.getById(this.collectionName, id);
+        return created as WorkSchedule;
       }
     } catch (error) {
       console.error('Error creating or updating schedule:', error);
@@ -75,24 +59,19 @@ export class ScheduleService {
 
   static async getWeekSchedules(weekStartDate: string): Promise<(WorkSchedule & { user_name: string })[]> {
     try {
-      const { data: schedules, error } = await supabase
-        .from(this.tableName)
-        .select(`
-          *,
-          users!inner(
-            full_name,
-            is_active
-          )
-        `)
-        .eq('week_start_date', weekStartDate)
-        .eq('users.is_active', true);
+      const schedules = await FirestoreService.getWhere(this.collectionName, 'week_start_date', '==', weekStartDate);
 
-      if (error) throw error;
+      const schedulesWithUsers: (WorkSchedule & { user_name: string })[] = [];
 
-      const schedulesWithUsers = (schedules || []).map((schedule: any) => ({
-        ...schedule,
-        user_name: schedule.users.full_name
-      }));
+      for (const schedule of schedules) {
+        const user = await FirestoreService.getById(FirestoreService.collections.users, schedule.user_id);
+        if (user && user.is_active) {
+          schedulesWithUsers.push({
+            ...schedule,
+            user_name: user.full_name
+          });
+        }
+      }
 
       return schedulesWithUsers.sort((a, b) => a.user_name.localeCompare(b.user_name));
     } catch (error) {
@@ -103,13 +82,14 @@ export class ScheduleService {
 
   static async deleteSchedule(userId: string, weekStartDate: string): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from(this.tableName)
-        .delete()
-        .eq('user_id', userId)
-        .eq('week_start_date', weekStartDate);
+      const schedules = await FirestoreService.getWithMultipleWhere(this.collectionName, [
+        { field: 'user_id', operator: '==', value: userId },
+        { field: 'week_start_date', operator: '==', value: weekStartDate }
+      ]);
 
-      if (error) throw error;
+      for (const schedule of schedules) {
+        await FirestoreService.delete(this.collectionName, schedule.id);
+      }
       return true;
     } catch (error) {
       console.error('Error deleting schedule:', error);
@@ -143,5 +123,4 @@ export class ScheduleService {
     const monday = new Date(targetDate.setDate(diff));
     return monday.toISOString().split('T')[0];
   }
-
 }

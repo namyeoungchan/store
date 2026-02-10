@@ -1,32 +1,18 @@
-import { db } from '../firebase/config';
+import { FirestoreService } from '../database/database';
 import { WorkRecord, WeeklyWorkSummary } from '../types';
 
 export class WorkRecordService {
+  private static collectionName = FirestoreService.collections.workRecords;
+
   static async createWorkRecord(record: Omit<WorkRecord, 'id' | 'created_at'>): Promise<WorkRecord> {
-    const insertData = {
-      ...record,
-      created_at: new Date().toISOString()
-    };
-
-    const { data, error } = await db
-      .from('work_records')
-      .insert(insertData)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    const id = await FirestoreService.create(this.collectionName, record);
+    const created = await FirestoreService.getById(this.collectionName, id);
+    return created as WorkRecord;
   }
 
   static async getWorkRecordById(id: string): Promise<WorkRecord | null> {
-    const { data, error } = await db
-      .from('work_records')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-
-    if (error) throw error;
-    return data;
+    const data = await FirestoreService.getById(this.collectionName, id);
+    return data as WorkRecord | null;
   }
 
   static async getWorkRecords(options?: {
@@ -34,80 +20,52 @@ export class WorkRecordService {
     startDate?: string;
     endDate?: string;
   }): Promise<WorkRecord[]> {
-    let query = db
-      .from('work_records')
-      .select('*')
-      .order('work_date', { ascending: false });
+    let records = await FirestoreService.getOrderedBy(this.collectionName, 'work_date', 'desc');
 
     if (options?.userId) {
-      query = query.eq('user_id', options.userId);
+      records = records.filter(r => r.user_id === options.userId);
     }
-
     if (options?.startDate) {
-      query = query.gte('work_date', options.startDate);
+      records = records.filter(r => r.work_date >= options.startDate!);
     }
-
     if (options?.endDate) {
-      query = query.lte('work_date', options.endDate);
+      records = records.filter(r => r.work_date <= options.endDate!);
     }
 
-    const { data, error } = await query;
-
-    if (error) throw error;
-    return data || [];
+    return records as WorkRecord[];
   }
 
   static async updateWorkRecord(id: string, updates: Partial<WorkRecord>): Promise<void> {
-    const { error } = await db
-      .from('work_records')
-      .update(updates)
-      .eq('id', id);
-
-    if (error) throw error;
+    await FirestoreService.update(this.collectionName, id, updates);
   }
 
   static async deleteWorkRecord(id: string): Promise<void> {
-    const { error } = await db
-      .from('work_records')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    await FirestoreService.delete(this.collectionName, id);
   }
 
   static async getWeeklyWorkSummary(weekStartDate: string): Promise<WeeklyWorkSummary[]> {
-    // Calculate week end date
     const startDate = new Date(weekStartDate);
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 6);
+    const endDateStr = endDate.toISOString().split('T')[0];
 
-    // Get all work records for the week with user information
-    const { data: records, error: recordsError } = await db
-      .from('work_records')
-      .select(`
-        *,
-        users:user_id (
-          full_name
-        )
-      `)
-      .gte('work_date', weekStartDate)
-      .lte('work_date', endDate.toISOString().split('T')[0])
-      .order('work_date', { ascending: true });
+    // 해당 주의 모든 근무 기록 조회
+    const records = await this.getWorkRecords({
+      startDate: weekStartDate,
+      endDate: endDateStr
+    });
 
-    if (recordsError) throw recordsError;
+    // 모든 활성 사용자 조회
+    const users = await FirestoreService.getWhere(
+      FirestoreService.collections.users,
+      'is_active',
+      '==',
+      true
+    );
 
-    // Get all users
-    const { data: users, error: usersError } = await db
-      .from('users')
-      .select('id, full_name')
-      .eq('is_active', true);
-
-    if (usersError) throw usersError;
-
-    // Group records by user
+    // 사용자별 기록 그룹화
     const userRecordsMap = new Map<string, any[]>();
-
-    (records || []).forEach(record => {
+    records.forEach(record => {
       const userId = record.user_id;
       if (!userRecordsMap.has(userId)) {
         userRecordsMap.set(userId, []);
@@ -115,12 +73,12 @@ export class WorkRecordService {
       userRecordsMap.get(userId)!.push(record);
     });
 
-    // Create summaries for each user
-    const summaries: WeeklyWorkSummary[] = (users || []).map(user => {
+    // 각 사용자별 요약 생성
+    const summaries: WeeklyWorkSummary[] = users.map(user => {
       const userRecords = userRecordsMap.get(user.id) || [];
 
-      const total_hours = userRecords.reduce((sum, r) => sum + (r.total_hours || 0), 0);
-      const total_pay = userRecords.reduce((sum, r) => sum + (r.total_pay || 0), 0);
+      const total_hours = userRecords.reduce((sum: number, r: any) => sum + (r.total_hours || 0), 0);
+      const total_pay = userRecords.reduce((sum: number, r: any) => sum + (r.total_pay || 0), 0);
       const work_days = userRecords.length;
 
       return {
@@ -130,7 +88,7 @@ export class WorkRecordService {
         total_hours,
         total_pay,
         work_days,
-        records: userRecords.map(r => ({
+        records: userRecords.map((r: any) => ({
           id: r.id,
           user_id: r.user_id,
           work_date: r.work_date,
@@ -153,41 +111,20 @@ export class WorkRecordService {
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 6);
 
-    const { data, error } = await db
-      .from('work_records')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('work_date', weekStartDate)
-      .lte('work_date', endDate.toISOString().split('T')[0])
-      .order('work_date', { ascending: true });
-
-    if (error) throw error;
-    return data || [];
+    return this.getWorkRecords({
+      userId,
+      startDate: weekStartDate,
+      endDate: endDate.toISOString().split('T')[0]
+    });
   }
 
   static async getUserTotalHoursForPeriod(userId: string, startDate: string, endDate: string): Promise<number> {
-    const { data, error } = await db
-      .from('work_records')
-      .select('total_hours')
-      .eq('user_id', userId)
-      .gte('work_date', startDate)
-      .lte('work_date', endDate);
-
-    if (error) throw error;
-
-    return (data || []).reduce((sum, record) => sum + (record.total_hours || 0), 0);
+    const records = await this.getWorkRecords({ userId, startDate, endDate });
+    return records.reduce((sum, record) => sum + (record.total_hours || 0), 0);
   }
 
   static async getUserTotalPayForPeriod(userId: string, startDate: string, endDate: string): Promise<number> {
-    const { data, error } = await db
-      .from('work_records')
-      .select('total_pay')
-      .eq('user_id', userId)
-      .gte('work_date', startDate)
-      .lte('work_date', endDate);
-
-    if (error) throw error;
-
-    return (data || []).reduce((sum, record) => sum + (record.total_pay || 0), 0);
+    const records = await this.getWorkRecords({ userId, startDate, endDate });
+    return records.reduce((sum, record) => sum + (record.total_pay || 0), 0);
   }
 }

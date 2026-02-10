@@ -1,19 +1,14 @@
-import { supabase } from '../firebase/config';
+import { FirestoreService } from '../database/database';
 import { User, UserWithSchedule } from '../types';
 import { PasswordUtils } from '../utils/passwordUtils';
 
 export class UserService {
-  private static tableName = 'users';
+  private static collectionName = FirestoreService.collections.users;
 
   static async getAllUsers(): Promise<User[]> {
     try {
-      const { data, error } = await supabase
-        .from(this.tableName)
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
+      const data = await FirestoreService.getOrderedBy(this.collectionName, 'created_at', 'desc');
+      return data as User[];
     } catch (error) {
       console.error('Error getting all users:', error);
       return [];
@@ -22,14 +17,8 @@ export class UserService {
 
   static async getUserById(id: string): Promise<User | null> {
     try {
-      const { data, error } = await supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data;
+      const data = await FirestoreService.getById(this.collectionName, id);
+      return data as User | null;
     } catch (error) {
       console.error('Error getting user by ID:', error);
       return null;
@@ -59,20 +48,12 @@ export class UserService {
     };
 
     try {
-      const { data, error } = await supabase
-        .from(this.tableName)
-        .insert(userData)
-        .select()
-        .single();
+      const id = await FirestoreService.create(this.collectionName, userData);
+      const created = await this.getUserById(id);
 
-      if (error) {
-        if (error.code === '23505') {
-          throw new Error('이미 존재하는 사용자입니다.');
-        }
-        throw error;
-      }
+      if (!created) throw new Error('Failed to retrieve created user');
 
-      const result = { ...data, password_temp: passwordTemp };
+      const result = { ...created, password_temp: passwordTemp || undefined };
       return result;
     } catch (error) {
       console.error('Error creating user:', error);
@@ -82,15 +63,13 @@ export class UserService {
 
   static async updateUser(id: string, updates: Partial<Omit<User, 'id' | 'created_at'>>): Promise<User | null> {
     try {
-      const { data, error } = await supabase
-        .from(this.tableName)
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      // undefined 값 필터링
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([_, value]) => value !== undefined)
+      );
 
-      if (error) throw error;
-      return data;
+      await FirestoreService.update(this.collectionName, id, cleanUpdates);
+      return this.getUserById(id);
     } catch (error) {
       console.error('Error updating user:', error);
       throw error;
@@ -99,12 +78,7 @@ export class UserService {
 
   static async deleteUser(id: string): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from(this.tableName)
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await FirestoreService.delete(this.collectionName, id);
       return true;
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -115,28 +89,27 @@ export class UserService {
   static async getUsersWithCurrentSchedule(): Promise<UserWithSchedule[]> {
     try {
       const currentWeekStart = this.getCurrentWeekStart();
-      const { data: users, error } = await supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('is_active', true);
+      const users = await this.getAllUsers();
+      const activeUsers = users.filter(user => user.is_active);
 
-      if (error) throw error;
       const usersWithSchedule: UserWithSchedule[] = [];
 
-      for (const user of users || []) {
-        const userWithSchedule = user as UserWithSchedule;
+      for (const user of activeUsers) {
+        const userWithSchedule: UserWithSchedule = { ...user };
 
         // 현재 주 스케줄 조회
-        const { data: schedules } = await supabase
-          .from('work_schedules')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('week_start_date', currentWeekStart);
+        const schedules = await FirestoreService.getWithMultipleWhere(
+          FirestoreService.collections.workSchedules,
+          [
+            { field: 'user_id', operator: '==', value: String(user.id) },
+            { field: 'week_start_date', operator: '==', value: currentWeekStart }
+          ]
+        );
 
-        if (schedules && schedules.length > 0) {
+        if (schedules.length > 0) {
           const schedule = schedules[0];
           userWithSchedule.current_schedule = {
-            user_id: user.id!,
+            user_id: String(user.id!),
             week_start_date: currentWeekStart,
             monday_start: schedule.monday_start,
             monday_end: schedule.monday_end,
@@ -156,7 +129,7 @@ export class UserService {
         }
 
         // 주간 근무 시간 계산
-        const weeklyHours = await this.getUserWeeklyHours(user.id!, currentWeekStart);
+        const weeklyHours = await this.getUserWeeklyHours(String(user.id!), currentWeekStart);
         userWithSchedule.total_hours_this_week = weeklyHours.total_hours;
         userWithSchedule.total_pay_this_week = weeklyHours.total_pay;
 
@@ -184,15 +157,17 @@ export class UserService {
       weekEnd.setDate(weekEnd.getDate() + 6);
       const weekEndStr = weekEnd.toISOString().split('T')[0];
 
-      const { data: workRecords } = await supabase
-        .from('work_records')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('work_date', weekStart)
-        .lte('work_date', weekEndStr);
+      const workRecords = await FirestoreService.getWithMultipleWhere(
+        FirestoreService.collections.workRecords,
+        [
+          { field: 'user_id', operator: '==', value: userId },
+          { field: 'work_date', operator: '>=', value: weekStart },
+          { field: 'work_date', operator: '<=', value: weekEndStr }
+        ]
+      );
 
-      const totalHours = (workRecords || []).reduce((sum, record) => sum + (record.total_hours || 0), 0);
-      const totalPay = (workRecords || []).reduce((sum, record) => sum + (record.total_pay || 0), 0);
+      const totalHours = workRecords.reduce((sum, record) => sum + (record.total_hours || 0), 0);
+      const totalPay = workRecords.reduce((sum, record) => sum + (record.total_pay || 0), 0);
 
       return { total_hours: totalHours, total_pay: totalPay };
     } catch (error) {
@@ -204,15 +179,13 @@ export class UserService {
   // 로그인 관련 메서드들
   static async getUserByEmail(email: string): Promise<User | null> {
     try {
-      const { data, error } = await supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('email', email)
-        .eq('is_active', true)
-        .single();
+      const users = await FirestoreService.getWithMultipleWhere(this.collectionName, [
+        { field: 'email', operator: '==', value: email },
+        { field: 'is_active', operator: '==', value: true }
+      ]);
 
-      if (error) throw error;
-      return data;
+      if (users.length === 0) return null;
+      return users[0] as User;
     } catch (error) {
       console.error('Error getting user by email:', error);
       return null;
@@ -234,12 +207,9 @@ export class UserService {
 
   static async updateLastLogin(userId: string): Promise<void> {
     try {
-      const { error } = await supabase
-        .from(this.tableName)
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', userId);
-
-      if (error) throw error;
+      await FirestoreService.update(this.collectionName, userId, {
+        last_login: new Date().toISOString()
+      });
     } catch (error) {
       console.error('Error updating last login:', error);
     }
@@ -250,16 +220,12 @@ export class UserService {
     const passwordHash = await PasswordUtils.hashPassword(tempPassword);
 
     try {
-      const { error } = await supabase
-        .from(this.tableName)
-        .update({
-          password_hash: passwordHash,
-          password_temp: tempPassword,
-          is_password_temp: true
-        })
-        .eq('id', userId);
+      await FirestoreService.update(this.collectionName, userId, {
+        password_hash: passwordHash,
+        password_temp: tempPassword,
+        is_password_temp: true
+      });
 
-      if (error) throw error;
       return tempPassword;
     } catch (error) {
       console.error('Error resetting password:', error);
@@ -276,16 +242,12 @@ export class UserService {
     const passwordHash = await PasswordUtils.hashPassword(newPassword);
 
     try {
-      const { error } = await supabase
-        .from(this.tableName)
-        .update({
-          password_hash: passwordHash,
-          password_temp: null,
-          is_password_temp: false
-        })
-        .eq('id', userId);
+      await FirestoreService.update(this.collectionName, userId, {
+        password_hash: passwordHash,
+        password_temp: null,
+        is_password_temp: false
+      });
 
-      if (error) throw error;
       return true;
     } catch (error) {
       console.error('Error changing password:', error);
@@ -296,37 +258,24 @@ export class UserService {
   static async toggleUserLoginAccess(userId: string, hasAccess: boolean): Promise<void> {
     try {
       if (hasAccess) {
-        // 로그인 권한 부여 - 임시 비밀번호 생성
         const tempPassword = PasswordUtils.generateTempPassword();
         const passwordHash = await PasswordUtils.hashPassword(tempPassword);
 
-        const { error } = await supabase
-          .from(this.tableName)
-          .update({
-            password_hash: passwordHash,
-            password_temp: tempPassword,
-            is_password_temp: true
-          })
-          .eq('id', userId);
-
-        if (error) throw error;
+        await FirestoreService.update(this.collectionName, userId, {
+          password_hash: passwordHash,
+          password_temp: tempPassword,
+          is_password_temp: true
+        });
       } else {
-        // 로그인 권한 제거
-        const { error } = await supabase
-          .from(this.tableName)
-          .update({
-            password_hash: null,
-            password_temp: null,
-            is_password_temp: true
-          })
-          .eq('id', userId);
-
-        if (error) throw error;
+        await FirestoreService.update(this.collectionName, userId, {
+          password_hash: null,
+          password_temp: null,
+          is_password_temp: true
+        });
       }
     } catch (error) {
       console.error('Error toggling user login access:', error);
       throw error;
     }
   }
-
 }
